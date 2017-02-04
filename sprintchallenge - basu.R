@@ -402,12 +402,6 @@ prop.test(x=c(cvdtable[1,5]*cvdtable[1,6],cvdtable[5,5]*cvdtable[5,6]), n=c(cvdt
 prop.test(x=c(cvdtable[2,5]*cvdtable[2,6],cvdtable[6,5]*cvdtable[6,6]), n=c(cvdtable[2,5],cvdtable[6,5]), correct=FALSE)
 prop.test(x=c(cvdtable[3,5]*cvdtable[3,6],cvdtable[7,5]*cvdtable[7,6]), n=c(cvdtable[3,5],cvdtable[7,5]), correct=FALSE)
 prop.test(x=c(cvdtable[4,5]*cvdtable[4,6],cvdtable[8,5]*cvdtable[8,6]), n=c(cvdtable[4,5],cvdtable[8,5]), correct=FALSE)
-cvdtabletimes = describeBy(t_cvds,list(riskcat,intensive),mat=TRUE)
-x1i = cvdtable[1:4,5]*cvdtable[1:4,6]
-x2i = cvdtable[5:8,5]*cvdtable[5:8,6]
-t1i = cvdtabletimes[1:4,5]*cvdtabletimes[1:4,6]
-t2i = cvdtabletimes[5:8,5]*cvdtabletimes[5:8,6]
-rma(measure="IR", x1i, x2i, t1i, t2i, method="REML")
 survdiff(Surv(t_cvds, cvd)~ riskcat+strata(sprint_set$INTENSIVE))
 
 
@@ -417,12 +411,6 @@ prop.test(x=c(saetable[1,5]*saetable[1,6],saetable[5,5]*saetable[5,6]), n=c(saet
 prop.test(x=c(saetable[2,5]*saetable[2,6],saetable[6,5]*saetable[6,6]), n=c(saetable[2,5],saetable[6,5]), correct=FALSE)
 prop.test(x=c(saetable[3,5]*saetable[3,6],saetable[7,5]*saetable[7,6]), n=c(saetable[3,5],saetable[7,5]), correct=FALSE)
 prop.test(x=c(saetable[4,5]*saetable[4,6],saetable[8,5]*saetable[8,6]), n=c(saetable[4,5],saetable[8,5]), correct=FALSE)
-saetabletimes = describeBy(t_saes,list(riskcat,intensive),mat=TRUE)
-x1i = saetable[1:4,5]*saetable[1:4,6]
-x2i = saetable[5:8,5]*saetable[5:8,6]
-t1i = saetabletimes[1:4,5]*saetabletimes[1:4,6]
-t2i = saetabletimes[5:8,5]*saetabletimes[5:8,6]
-rma(measure="IR", x1i, x2i, t1i, t2i, method="REML")
 survdiff(Surv(t_saes, sae)~ riskcat+strata(sprint_set$INTENSIVE))
 
 
