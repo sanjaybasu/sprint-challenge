@@ -13,6 +13,6 @@ Sanjay Basu, M.D., Ph.D.,1,2* Jeremy B. Sussman, M.D., M.S.3,4, Joseph Rigdon, P
 5 Quantitative Sciences Unit, Stanford University
 6 Department of Industrial and Operations Engineering, University of Michigan
 
-Email: basus@stanford.edu
+*Email: basus@stanford.edu
 
 Licensed under a Creative Commons Attribution (CC BY) license. Anyone may copy, distribute, or reuse the content as long as the author and original source are properly cited.
