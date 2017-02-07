@@ -1,7 +1,7 @@
 # SPRINT Challenge entry, Sanjay Basu et al., basus@stanford.edu
 
 # INSTRUCTIONS: install packages as commented out under 'load packages' header', and set all working directory calls (setwd) and load/save commands to appropriate directories on your local machine, to load/save data from your desired location. 
-# This code does not contain the data itself, which requires IRB and NIH-BioLINCC approval, but is built to analyze the NIH-BioLINCC versions of the SPRINT-Pop and ACCORD-BP datasets. 
+# This code does not contain the data itself, which requires IRB and NIH-BioLINCC approval, but is built to analyze the NIH-BioLINCC versions of the SPRINT-Pop and ACCORD-BP datasets.. 
 
 setwd("~/Data/sprint_pop/data")
 
@@ -9,7 +9,7 @@ setwd("~/Data/sprint_pop/data")
 
 # install.packages('sas7bdat')
 # install.packages('gdata')
-# install.packages('glmnet') 
+# install.packages('glmnet') # https://web.stanford.edu/~hastie/glmnet/glmnet_alpha.html
 # install.packages('Hmisc')
 # install.packages('survival')
 # install.packages('matrixStats')
@@ -40,7 +40,7 @@ library(survminer)
 library(mvmeta)
 library(survMisc)
 library(RTCGA.clinical)
-registerDoMC(cores=4) # for quad-core processors
+registerDoMC(cores=4)
 
 #### merge sprintpop data ####
 rm(list=ls())
@@ -288,6 +288,7 @@ x2i = cvdtable[5:8,5]*cvdtable[5:8,6]
 t1i = cvdtabletimes[1:4,5]*cvdtabletimes[1:4,6]
 t2i = cvdtabletimes[5:8,5]*cvdtabletimes[5:8,6]
 rma(measure="IR", x1i, x2i, t1i, t2i, method="REML")
+survdiff(Surv(t_cvds, cvd)~ riskcat+strata(sprint_set$INTENSIVE))
 saetable = describeBy(sae,list(riskcat,intensive),mat=TRUE)
 saetable
 prop.test(x=c(saetable[1,5]*saetable[1,6],saetable[5,5]*saetable[5,6]), n=c(saetable[1,5],saetable[5,5]), correct=FALSE)
@@ -300,6 +301,7 @@ x2i = saetable[5:8,5]*saetable[5:8,6]
 t1i = saetabletimes[1:4,5]*saetabletimes[1:4,6]
 t2i = saetabletimes[5:8,5]*saetabletimes[5:8,6]
 rma(measure="IR", x1i, x2i, t1i, t2i, method="REML")
+survdiff(Surv(t_saes, sae)~ riskcat+strata(sprint_set$INTENSIVE))
 setwd("~/Documents/Epi/Research/NCDs/HTN/SPRINT challenge")
 fit0 <- survfit(Surv(t_cvds[riskcat==1], cvd[riskcat==1]) ~ sprint_set$INTENSIVE[riskcat==1])
 ggsurvplot(
@@ -321,6 +323,7 @@ ggsurvplot(
   risk.table.y.text.col = T, 
   risk.table.y.text = T 
 )
+
 fit1 <- survfit(Surv(t_cvds[riskcat==2], cvd[riskcat==2]) ~ sprint_set$INTENSIVE[riskcat==2])
 ggsurvplot(
   fit1,                     
@@ -341,6 +344,7 @@ ggsurvplot(
   risk.table.y.text.col = T, 
   risk.table.y.text = T 
 )
+
 fit2 <- survfit(Surv(t_cvds[riskcat==3], cvd[riskcat==3]) ~ sprint_set$INTENSIVE[riskcat==3])
 ggsurvplot(
   fit2,                     
@@ -361,6 +365,7 @@ ggsurvplot(
   risk.table.y.text.col = T, 
   risk.table.y.text = T 
 )
+
 fit3 <- survfit(Surv(t_cvds[riskcat==4], cvd[riskcat==4]) ~ sprint_set$INTENSIVE[riskcat==4])
 ggsurvplot(
   fit3,                     
@@ -381,6 +386,7 @@ ggsurvplot(
   risk.table.y.text.col = T, 
   risk.table.y.text = T 
 )
+
 sfit0 <- survfit(Surv(t_saes[riskcat==1], sae[riskcat==1]) ~ sprint_set$INTENSIVE[riskcat==1])
 ggsurvplot(
   sfit0,                     
@@ -401,6 +407,7 @@ ggsurvplot(
   risk.table.y.text.col = T, 
   risk.table.y.text = T 
 )
+
 sfit1 <- survfit(Surv(t_saes[riskcat==2], sae[riskcat==2]) ~ sprint_set$INTENSIVE[riskcat==2])
 ggsurvplot(
   sfit1,                     
@@ -421,6 +428,7 @@ ggsurvplot(
   risk.table.y.text.col = T, 
   risk.table.y.text = T 
 )
+
 sfit2 <- survfit(Surv(t_saes[riskcat==3], sae[riskcat==3]) ~ sprint_set$INTENSIVE[riskcat==3])
 ggsurvplot(
   sfit2,                     
@@ -441,6 +449,7 @@ ggsurvplot(
   risk.table.y.text.col = T, 
   risk.table.y.text = T 
 )
+
 sfit3 <- survfit(Surv(t_saes[riskcat==4], sae[riskcat==4]) ~ sprint_set$INTENSIVE[riskcat==4])
 ggsurvplot(
   sfit3,                     
@@ -466,6 +475,7 @@ save.image("~/Data/sprint_pop/data/sprint_run.RData")
 #### merge accord data ####
 setwd("~/Data/accord/3-Data_Sets-Analysis/3a-Analysis_Data_Sets")
 accord_key = read.sas7bdat("accord_key.sas7bdat")
+accord_key = accord_key[(accord_key$arm>=1)&(accord_key$arm<=4),]
 bloodpressure = read.sas7bdat("bloodpressure.sas7bdat")
 concomitantmeds = read.sas7bdat("concomitantmeds.sas7bdat")
 cvdoutcomes = read.sas7bdat("cvdoutcomes.sas7bdat")
@@ -690,7 +700,7 @@ accord_set = merge(accord_set,lipids_cut,by="MaskID")
 accord_set = merge(accord_set,otherlabs_cut,by="MaskID")
 save.image("~/Data/sprint_pop/data/accord_cut.RData")
 
-#### score vs ACCORD outcomes ####
+#### test CVD model on accord without recalibration ####
 load("~/Data/sprint_pop/data/accord_cut.RData")
 cvd = (accord_set$censor_nmi==0)|(accord_set$censor_nst==0)|(accord_set$censor_cm==0)
 t_censor = rowMaxs(cbind(accord_set$fuyrs_nmi*365.25,accord_set$fuyrs_nst*365.25,accord_set$fuyrs_cm*365.25))
@@ -729,7 +739,137 @@ UMALCR = accord_set$ualb
 EGFR = accord_set$gfr
 SCREAT = accord_set$screat
 BMI = accord_set$wt_kg/((accord_set$ht_cm/1000)^2)/100
-benriskmodel_pred = predict(benriskmodel,accord_set)
+c2<-data.frame(cvd,t_cvds,sae,t_saes,
+              INTENSIVE,AGE,FEMALE,RACE_BLACK,hisp,
+              SBP.y,DBP.y,N_AGENTS,currentsmoker,formersmoker,
+              ASPIRIN,STATIN,
+              SCREAT,CHR,HDL,TRR,UMALCR,BMI,
+              INTENSIVE*AGE,INTENSIVE*FEMALE,INTENSIVE*RACE_BLACK,INTENSIVE*hisp,
+              INTENSIVE*SBP.y,INTENSIVE*DBP.y,INTENSIVE*N_AGENTS,INTENSIVE*currentsmoker,INTENSIVE*formersmoker,
+              INTENSIVE*ASPIRIN,INTENSIVE*STATIN,
+              INTENSIVE*SCREAT,INTENSIVE*CHR,INTENSIVE*HDL,INTENSIVE*TRR,INTENSIVE*UMALCR,INTENSIVE*BMI)
+c2=c2[complete.cases(c2),]
+adm.cens=5*365.25
+c2$fu.time <- pmin(c2$t_cvds, adm.cens)
+c2$status <- ifelse(as.numeric(adm.cens < c2$t_cvds), 0, c2$cvd)
+chartable2 =describeBy(c2,c2$INTENSIVE,mat=TRUE)
+chartable2
+chartable2[is.na(chartable2)]=0
+for (i in dim(chartable[1])){
+  print(i)
+  print(prop.test(x=c(chartable2[i,5],chartable2[i-1,5]), n=c(chartable2[i,4],chartable2[i-1,4]), correct=FALSE))
+}
+survfit_c2=survfit(survcox_c, newdata=c2, se.fit=FALSE)
+estinc_c2=1-survfit_c2$surv[dim(survfit_c2$surv)[1],]
+c2$dec=as.numeric(cut2(estinc_c2, g=7))
+GND.result=GND.calib(pred=estinc_c2, tvar=c2$fu.time, out=c2$status, 
+                     cens.t=adm.cens, groups=c2$dec, adm.cens=adm.cens)
+GND.result
+ci.cvAUC(estinc_c2,c2$cvd)
+
+#### test CVD model on accord WITH recalibration ####
+survcox_c2<-coxph(data=c2, Surv(fu.time, status)~AGE+FEMALE+RACE_BLACK+hisp+SBP.y+
+                   N_AGENTS+currentsmoker+formersmoker+ASPIRIN+STATIN+SCREAT+CHR+
+                   HDL+TRR+UMALCR+BMI+INTENSIVE*FEMALE+INTENSIVE*RACE_BLACK+
+                   INTENSIVE*DBP.y+INTENSIVE*currentsmoker+INTENSIVE*ASPIRIN+
+                   INTENSIVE*STATIN+INTENSIVE*CHR+INTENSIVE*HDL+INTENSIVE*TRR)
+summary(survcox_c2)
+survfit_c2=survfit(survcox_c2, newdata=c2, se.fit=FALSE)
+estinc_c2=1-survfit_c2$surv[dim(survfit_c2$surv)[1],]
+c2$dec=as.numeric(cut2(estinc_c2, g=10))
+GND.result=GND.calib(pred=estinc_c2, tvar=c2$fu.time, out=c2$status, 
+                     cens.t=adm.cens, groups=c2$dec, adm.cens=adm.cens)
+GND.result
+ci.cvAUC(estinc_c2,c2$cvd)
+
+#### test SAE model on accord without recalibration ####
+d2<-c2
+d2=d2[complete.cases(d2),]
+adm.cens=5*365.25
+d2$fu.time <- pmin(d2$t_saes, adm.cens)
+d2$status <- ifelse(as.numeric(adm.cens < d2$t_saes), 0, d2$sae)
+survfit_d2=survfit(survcox_d, newdata=d2, se.fit=FALSE)
+estinc_d2=1-survfit_d2$surv[dim(survfit_d2$surv)[1],]
+d2$dec=as.numeric(cut2(estinc_d2, g=10))
+GND.result=GND.calib(pred=estinc_d2, tvar=d2$fu.time, out=d2$status, 
+                     cens.t=adm.cens, groups=d2$dec, adm.cens=adm.cens)
+GND.result
+ci.cvAUC(estinc_d,d$sae)
+
+#### test SAE model on accord WITH recalibration ####
+survcox_d2<-coxph(data=d2, Surv(fu.time, status)~AGE+FEMALE+hisp+SBP.y+DBP.y+
+                   N_AGENTS+currentsmoker+formersmoker+SCREAT+CHR+HDL+UMALCR+BMI+
+                   INTENSIVE*FEMALE+INTENSIVE*STATIN+INTENSIVE*SCREAT+INTENSIVE*TRR+INTENSIVE*UMALCR)
+summary(survcox_d2)
+survfit_d2=survfit(survcox_d2, newdata=d2, se.fit=FALSE)
+estinc_d2=1-survfit_d2$surv[dim(survfit_d2$surv)[1],]
+d2$dec=as.numeric(cut2(estinc_d2, g=10))
+GND.result=GND.calib(pred=estinc_d2, tvar=d2$fu.time, out=d2$status, 
+                     cens.t=adm.cens, groups=d2$dec, adm.cens=adm.cens)
+GND.result
+ci.cvAUC(estinc_d2,d2$sae)
+
+#### score vs ACCORD outcomes ####
+INTENSIVE = accord_set$INTENSIVE
+INTENSIVE[INTENSIVE==0]=1
+cint<-data.frame(cvd,t_cvds,sae,t_saes,
+                 INTENSIVE,AGE,FEMALE,RACE_BLACK,hisp,
+                 SBP.y,DBP.y,N_AGENTS,currentsmoker,formersmoker,
+                 ASPIRIN,STATIN,
+                 SCREAT,CHR,HDL,TRR,UMALCR,BMI,
+                 INTENSIVE*AGE,INTENSIVE*FEMALE,INTENSIVE*RACE_BLACK,INTENSIVE*hisp,
+                 INTENSIVE*SBP.y,INTENSIVE*DBP.y,INTENSIVE*N_AGENTS,INTENSIVE*currentsmoker,INTENSIVE*formersmoker,
+                 INTENSIVE*ASPIRIN,INTENSIVE*STATIN,
+                 INTENSIVE*SCREAT,INTENSIVE*CHR,INTENSIVE*HDL,INTENSIVE*TRR,INTENSIVE*UMALCR,INTENSIVE*BMI)
+cint=cint[complete.cases(cint),]
+adm.cens=5*365.25
+cint$fu.time <- pmin(cint$t_cvds, adm.cens)
+cint$status <- ifelse(as.numeric(adm.cens < cint$t_cvds), 0, cint$cvd)
+survfit_cint=survfit(survcox_c, newdata=cint, se.fit=FALSE)
+estinc_cint=1-survfit_cint$surv[dim(survfit_cint$surv)[1],]
+INTENSIVE = accord_set$INTENSIVE
+INTENSIVE[INTENSIVE==1]=0
+cstd<-data.frame(cvd,t_cvds,sae,t_saes,
+                 INTENSIVE,AGE,FEMALE,RACE_BLACK,hisp,
+                 SBP.y,DBP.y,N_AGENTS,currentsmoker,formersmoker,
+                 ASPIRIN,STATIN,
+                 SCREAT,CHR,HDL,TRR,UMALCR,BMI,
+                 INTENSIVE*AGE,INTENSIVE*FEMALE,INTENSIVE*RACE_BLACK,INTENSIVE*hisp,
+                 INTENSIVE*SBP.y,INTENSIVE*DBP.y,INTENSIVE*N_AGENTS,INTENSIVE*currentsmoker,INTENSIVE*formersmoker,
+                 INTENSIVE*ASPIRIN,INTENSIVE*STATIN,
+                 INTENSIVE*SCREAT,INTENSIVE*CHR,INTENSIVE*HDL,INTENSIVE*TRR,INTENSIVE*UMALCR,INTENSIVE*BMI)
+cstd=cstd[complete.cases(cstd),]
+adm.cens=5*365.25
+cstd$fu.time <- pmin(cstd$t_cvds, adm.cens)
+cstd$status <- ifelse(as.numeric(adm.cens < cstd$t_cvds), 0, cstd$cvd)
+survfit_cstd=survfit(survcox_c, newdata=cstd, se.fit=FALSE)
+estinc_cstd=1-survfit_cstd$surv[dim(survfit_cstd$surv)[1],]
+benefit = estinc_cstd-estinc_cint
+hist(benefit,xlab="Predicted reduction in CVD events/CVD death \n from intensive treatment (probability)")
+survfit_dint=survfit(survcox_d, newdata=cint, se.fit=FALSE)
+estinc_dint=1-survfit_dint$surv[dim(survfit_dint$surv)[1],]
+survfit_dstd=survfit(survcox_d, newdata=cstd, se.fit=FALSE)
+estinc_dstd=1-survfit_dstd$surv[dim(survfit_dstd$surv)[1],]
+risk = estinc_dint-estinc_dstd
+hist(risk,xlab="Predicted increase in serious adverse events \n from intensive treatment (probability)")
+benriskdiff = benefit - risk
+hist(benriskdiff)
+plot(benefit,risk, xlim=c(-.2,.4),ylim=c(-.2,.4),xlab="Predicted reduction in CVD events/death", ylab="Predicted increase in serious adverse events")
+abline(a=0,b=1, col = "gray60")
+abline(a=0,b=0, col = "gray60")
+abline(v=0, col = "gray60")
+INTENSIVE = accord_set$INTENSIVE
+testset<-data.frame(cvd,t_cvds,sae,t_saes,
+                    INTENSIVE,AGE,FEMALE,RACE_BLACK,hisp,
+                    SBP.y,DBP.y,N_AGENTS,currentsmoker,formersmoker,
+                    ASPIRIN,STATIN,
+                    SCREAT,CHR,HDL,TRR,UMALCR,BMI,
+                    INTENSIVE*AGE,INTENSIVE*FEMALE,INTENSIVE*RACE_BLACK,INTENSIVE*hisp,
+                    INTENSIVE*SBP.y,INTENSIVE*DBP.y,INTENSIVE*N_AGENTS,INTENSIVE*currentsmoker,INTENSIVE*formersmoker,
+                    INTENSIVE*ASPIRIN,INTENSIVE*STATIN,
+                    INTENSIVE*SCREAT,INTENSIVE*CHR,INTENSIVE*HDL,INTENSIVE*TRR,INTENSIVE*UMALCR,INTENSIVE*BMI)
+testset=testset[complete.cases(testset),]
+benriskmodel_pred = predict(benriskmodel,testset)
 summary(benriskmodel_pred)
 hist(benriskmodel_pred)
 riskcatquants = sprintcats
@@ -737,31 +877,33 @@ riskcat = 1*(benriskmodel_pred<riskcatquants[1])+
   2*((benriskmodel_pred>=riskcatquants[1])&(benriskmodel_pred<riskcatquants[2]))+
   3*((benriskmodel_pred>=riskcatquants[2])&(benriskmodel_pred<riskcatquants[3]))+
   4*(benriskmodel_pred>=riskcatquants[3])
-intensive = accord_set$INTENSIVE
-cvdtable = describeBy(cvd,list(riskcat,intensive),mat=TRUE)
+intensive = testset$INTENSIVE
+cvdtable = describeBy(testset$cvd,list(riskcat,testset$INTENSIVE),mat=TRUE)
 cvdtable
 prop.test(x=c(cvdtable[1,5]*cvdtable[1,6],cvdtable[5,5]*cvdtable[5,6]), n=c(cvdtable[1,5],cvdtable[5,5]), correct=FALSE)
 prop.test(x=c(cvdtable[2,5]*cvdtable[2,6],cvdtable[6,5]*cvdtable[6,6]), n=c(cvdtable[2,5],cvdtable[6,5]), correct=FALSE)
 prop.test(x=c(cvdtable[3,5]*cvdtable[3,6],cvdtable[7,5]*cvdtable[7,6]), n=c(cvdtable[3,5],cvdtable[7,5]), correct=FALSE)
 prop.test(x=c(cvdtable[4,5]*cvdtable[4,6],cvdtable[8,5]*cvdtable[8,6]), n=c(cvdtable[4,5],cvdtable[8,5]), correct=FALSE)
-cvdtabletimes = describeBy(t_cvds,list(riskcat,intensive),mat=TRUE)
+cvdtabletimes = describeBy(testset$t_cvds,list(riskcat,testset$INTENSIVE),mat=TRUE)
 x1i = cvdtable[1:4,5]*cvdtable[1:4,6]
 x2i = cvdtable[5:8,5]*cvdtable[5:8,6]
 t1i = cvdtabletimes[1:4,5]*cvdtabletimes[1:4,6]
 t2i = cvdtabletimes[5:8,5]*cvdtabletimes[5:8,6]
 rma(measure="IR", x1i, x2i, t1i, t2i, method="REML")
-saetable = describeBy(sae,list(riskcat,intensive),mat=TRUE)
+survdiff(Surv(testset$t_cvds, testset$cvd)~ riskcat+strata(testset$INTENSIVE))
+saetable = describeBy(testset$sae,list(riskcat,testset$INTENSIVE),mat=TRUE)
 saetable
 prop.test(x=c(saetable[1,5]*saetable[1,6],saetable[5,5]*saetable[5,6]), n=c(saetable[1,5],saetable[5,5]), correct=FALSE)
 prop.test(x=c(saetable[2,5]*saetable[2,6],saetable[6,5]*saetable[6,6]), n=c(saetable[2,5],saetable[6,5]), correct=FALSE)
 prop.test(x=c(saetable[3,5]*saetable[3,6],saetable[7,5]*saetable[7,6]), n=c(saetable[3,5],saetable[7,5]), correct=FALSE)
 prop.test(x=c(saetable[4,5]*saetable[4,6],saetable[8,5]*saetable[8,6]), n=c(saetable[4,5],saetable[8,5]), correct=FALSE)
-saetabletimes = describeBy(t_saes,list(riskcat,intensive),mat=TRUE)
+saetabletimes = describeBy(testset$t_saes,list(riskcat,testset$INTENSIVE),mat=TRUE)
 x1i = saetable[1:4,5]*saetable[1:4,6]
 x2i = saetable[5:8,5]*saetable[5:8,6]
 t1i = saetabletimes[1:4,5]*saetabletimes[1:4,6]
 t2i = saetabletimes[5:8,5]*saetabletimes[5:8,6]
 rma(measure="IR", x1i, x2i, t1i, t2i, method="REML")
+survdiff(Surv(testset$t_saes, testset$sae)~ riskcat+strata(testset$INTENSIVE))
 setwd("~/Documents/Epi/Research/NCDs/HTN/SPRINT challenge")
 fit0 <- survfit(Surv(t_cvds[riskcat==1], cvd[riskcat==1]) ~ accord_set$INTENSIVE[riskcat==1])
 ggsurvplot(
@@ -801,6 +943,7 @@ ggsurvplot(
   risk.table.y.text.col = T, 
   risk.table.y.text = T 
 )
+
 fit2 <- survfit(Surv(t_cvds[riskcat==3], cvd[riskcat==3]) ~ accord_set$INTENSIVE[riskcat==3])
 ggsurvplot(
   fit2,                     
@@ -820,6 +963,7 @@ ggsurvplot(
   risk.table.y.text.col = T, 
   risk.table.y.text = T 
 )
+
 fit3 <- survfit(Surv(t_cvds[riskcat==4], cvd[riskcat==4]) ~ accord_set$INTENSIVE[riskcat==4])
 ggsurvplot(
   fit3,                     
@@ -839,6 +983,7 @@ ggsurvplot(
   risk.table.y.text.col = T, 
   risk.table.y.text = T 
 )
+
 sfit0 <- survfit(Surv(t_saes[riskcat==1], sae[riskcat==1]) ~ accord_set$INTENSIVE[riskcat==1])
 ggsurvplot(
   sfit0,                     
@@ -858,6 +1003,7 @@ ggsurvplot(
   risk.table.y.text.col = T, 
   risk.table.y.text = T 
 )
+
 sfit1 <- survfit(Surv(t_saes[riskcat==2], sae[riskcat==2]) ~ accord_set$INTENSIVE[riskcat==2])
 ggsurvplot(
   sfit1,                     
@@ -877,6 +1023,7 @@ ggsurvplot(
   risk.table.y.text.col = T, 
   risk.table.y.text = T 
 )
+
 sfit2 <- survfit(Surv(t_saes[riskcat==3], sae[riskcat==3]) ~ accord_set$INTENSIVE[riskcat==3])
 ggsurvplot(
   sfit2,                     
@@ -896,6 +1043,7 @@ ggsurvplot(
   risk.table.y.text.col = T, 
   risk.table.y.text = T 
 )
+
 sfit3 <- survfit(Surv(t_saes[riskcat==4], sae[riskcat==4]) ~ accord_set$INTENSIVE[riskcat==4])
 ggsurvplot(
   sfit3,                     
@@ -916,4 +1064,8 @@ ggsurvplot(
   risk.table.y.text = T 
 )
 save.image("~/Data/sprint_pop/data/accord_run.RData")
+
+
+
+
 
