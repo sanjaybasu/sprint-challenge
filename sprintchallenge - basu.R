@@ -699,8 +699,6 @@ accord_set = merge(accord_set,cvdoutcomes,by="MaskID")
 accord_set = merge(accord_set,lipids_cut,by="MaskID")
 accord_set = merge(accord_set,otherlabs_cut,by="MaskID")
 save.image("~/Data/sprint_pop/data/accord_cut.RData")
-
-#### test CVD model on accord without recalibration ####
 load("~/Data/sprint_pop/data/accord_cut.RData")
 cvd = (accord_set$censor_nmi==0)|(accord_set$censor_nst==0)|(accord_set$censor_cm==0)
 t_censor = rowMaxs(cbind(accord_set$fuyrs_nmi*365.25,accord_set$fuyrs_nst*365.25,accord_set$fuyrs_cm*365.25))
@@ -739,77 +737,6 @@ UMALCR = accord_set$ualb
 EGFR = accord_set$gfr
 SCREAT = accord_set$screat
 BMI = accord_set$wt_kg/((accord_set$ht_cm/1000)^2)/100
-c2<-data.frame(cvd,t_cvds,sae,t_saes,
-              INTENSIVE,AGE,FEMALE,RACE_BLACK,hisp,
-              SBP.y,DBP.y,N_AGENTS,currentsmoker,formersmoker,
-              ASPIRIN,STATIN,
-              SCREAT,CHR,HDL,TRR,UMALCR,BMI,
-              INTENSIVE*AGE,INTENSIVE*FEMALE,INTENSIVE*RACE_BLACK,INTENSIVE*hisp,
-              INTENSIVE*SBP.y,INTENSIVE*DBP.y,INTENSIVE*N_AGENTS,INTENSIVE*currentsmoker,INTENSIVE*formersmoker,
-              INTENSIVE*ASPIRIN,INTENSIVE*STATIN,
-              INTENSIVE*SCREAT,INTENSIVE*CHR,INTENSIVE*HDL,INTENSIVE*TRR,INTENSIVE*UMALCR,INTENSIVE*BMI)
-c2=c2[complete.cases(c2),]
-adm.cens=5*365.25
-c2$fu.time <- pmin(c2$t_cvds, adm.cens)
-c2$status <- ifelse(as.numeric(adm.cens < c2$t_cvds), 0, c2$cvd)
-chartable2 =describeBy(c2,c2$INTENSIVE,mat=TRUE)
-chartable2
-chartable2[is.na(chartable2)]=0
-for (i in dim(chartable[1])){
-  print(i)
-  print(prop.test(x=c(chartable2[i,5],chartable2[i-1,5]), n=c(chartable2[i,4],chartable2[i-1,4]), correct=FALSE))
-}
-survfit_c2=survfit(survcox_c, newdata=c2, se.fit=FALSE)
-estinc_c2=1-survfit_c2$surv[dim(survfit_c2$surv)[1],]
-c2$dec=as.numeric(cut2(estinc_c2, g=7))
-GND.result=GND.calib(pred=estinc_c2, tvar=c2$fu.time, out=c2$status, 
-                     cens.t=adm.cens, groups=c2$dec, adm.cens=adm.cens)
-GND.result
-ci.cvAUC(estinc_c2,c2$cvd)
-
-#### test CVD model on accord WITH recalibration ####
-survcox_c2<-coxph(data=c2, Surv(fu.time, status)~AGE+FEMALE+RACE_BLACK+hisp+SBP.y+
-                   N_AGENTS+currentsmoker+formersmoker+ASPIRIN+STATIN+SCREAT+CHR+
-                   HDL+TRR+UMALCR+BMI+INTENSIVE*FEMALE+INTENSIVE*RACE_BLACK+
-                   INTENSIVE*DBP.y+INTENSIVE*currentsmoker+INTENSIVE*ASPIRIN+
-                   INTENSIVE*STATIN+INTENSIVE*CHR+INTENSIVE*HDL+INTENSIVE*TRR)
-summary(survcox_c2)
-survfit_c2=survfit(survcox_c2, newdata=c2, se.fit=FALSE)
-estinc_c2=1-survfit_c2$surv[dim(survfit_c2$surv)[1],]
-c2$dec=as.numeric(cut2(estinc_c2, g=10))
-GND.result=GND.calib(pred=estinc_c2, tvar=c2$fu.time, out=c2$status, 
-                     cens.t=adm.cens, groups=c2$dec, adm.cens=adm.cens)
-GND.result
-ci.cvAUC(estinc_c2,c2$cvd)
-
-#### test SAE model on accord without recalibration ####
-d2<-c2
-d2=d2[complete.cases(d2),]
-adm.cens=5*365.25
-d2$fu.time <- pmin(d2$t_saes, adm.cens)
-d2$status <- ifelse(as.numeric(adm.cens < d2$t_saes), 0, d2$sae)
-survfit_d2=survfit(survcox_d, newdata=d2, se.fit=FALSE)
-estinc_d2=1-survfit_d2$surv[dim(survfit_d2$surv)[1],]
-d2$dec=as.numeric(cut2(estinc_d2, g=10))
-GND.result=GND.calib(pred=estinc_d2, tvar=d2$fu.time, out=d2$status, 
-                     cens.t=adm.cens, groups=d2$dec, adm.cens=adm.cens)
-GND.result
-ci.cvAUC(estinc_d,d$sae)
-
-#### test SAE model on accord WITH recalibration ####
-survcox_d2<-coxph(data=d2, Surv(fu.time, status)~AGE+FEMALE+hisp+SBP.y+DBP.y+
-                   N_AGENTS+currentsmoker+formersmoker+SCREAT+CHR+HDL+UMALCR+BMI+
-                   INTENSIVE*FEMALE+INTENSIVE*STATIN+INTENSIVE*SCREAT+INTENSIVE*TRR+INTENSIVE*UMALCR)
-summary(survcox_d2)
-survfit_d2=survfit(survcox_d2, newdata=d2, se.fit=FALSE)
-estinc_d2=1-survfit_d2$surv[dim(survfit_d2$surv)[1],]
-d2$dec=as.numeric(cut2(estinc_d2, g=10))
-GND.result=GND.calib(pred=estinc_d2, tvar=d2$fu.time, out=d2$status, 
-                     cens.t=adm.cens, groups=d2$dec, adm.cens=adm.cens)
-GND.result
-ci.cvAUC(estinc_d2,d2$sae)
-
-#### score vs ACCORD outcomes ####
 INTENSIVE = accord_set$INTENSIVE
 INTENSIVE[INTENSIVE==0]=1
 cint<-data.frame(cvd,t_cvds,sae,t_saes,
