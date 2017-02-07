@@ -288,7 +288,6 @@ x2i = cvdtable[5:8,5]*cvdtable[5:8,6]
 t1i = cvdtabletimes[1:4,5]*cvdtabletimes[1:4,6]
 t2i = cvdtabletimes[5:8,5]*cvdtabletimes[5:8,6]
 rma(measure="IR", x1i, x2i, t1i, t2i, method="REML")
-survdiff(Surv(t_cvds, cvd)~ riskcat+strata(sprint_set$INTENSIVE))
 saetable = describeBy(sae,list(riskcat,intensive),mat=TRUE)
 saetable
 prop.test(x=c(saetable[1,5]*saetable[1,6],saetable[5,5]*saetable[5,6]), n=c(saetable[1,5],saetable[5,5]), correct=FALSE)
@@ -301,7 +300,6 @@ x2i = saetable[5:8,5]*saetable[5:8,6]
 t1i = saetabletimes[1:4,5]*saetabletimes[1:4,6]
 t2i = saetabletimes[5:8,5]*saetabletimes[5:8,6]
 rma(measure="IR", x1i, x2i, t1i, t2i, method="REML")
-survdiff(Surv(t_saes, sae)~ riskcat+strata(sprint_set$INTENSIVE))
 setwd("~/Documents/Epi/Research/NCDs/HTN/SPRINT challenge")
 fit0 <- survfit(Surv(t_cvds[riskcat==1], cvd[riskcat==1]) ~ sprint_set$INTENSIVE[riskcat==1])
 ggsurvplot(
@@ -752,7 +750,6 @@ x2i = cvdtable[5:8,5]*cvdtable[5:8,6]
 t1i = cvdtabletimes[1:4,5]*cvdtabletimes[1:4,6]
 t2i = cvdtabletimes[5:8,5]*cvdtabletimes[5:8,6]
 rma(measure="IR", x1i, x2i, t1i, t2i, method="REML")
-survdiff(Surv(t_cvds, cvd)~ riskcat+strata(accord_set$INTENSIVE))
 saetable = describeBy(sae,list(riskcat,intensive),mat=TRUE)
 saetable
 prop.test(x=c(saetable[1,5]*saetable[1,6],saetable[5,5]*saetable[5,6]), n=c(saetable[1,5],saetable[5,5]), correct=FALSE)
@@ -765,7 +762,6 @@ x2i = saetable[5:8,5]*saetable[5:8,6]
 t1i = saetabletimes[1:4,5]*saetabletimes[1:4,6]
 t2i = saetabletimes[5:8,5]*saetabletimes[5:8,6]
 rma(measure="IR", x1i, x2i, t1i, t2i, method="REML")
-survdiff(Surv(t_saes, sae)~ riskcat+strata(accord_set$INTENSIVE))
 setwd("~/Documents/Epi/Research/NCDs/HTN/SPRINT challenge")
 fit0 <- survfit(Surv(t_cvds[riskcat==1], cvd[riskcat==1]) ~ accord_set$INTENSIVE[riskcat==1])
 ggsurvplot(
