@@ -1,7 +1,8 @@
 # SPRINT Challenge entry, Sanjay Basu et al., basus@stanford.edu
 
 # INSTRUCTIONS: install packages as commented out under 'load packages' header', and set all working directory calls (setwd) and load/save commands to appropriate directories on your local machine, to load/save data from your desired location. 
-# This code does not contain the data itself, which requires IRB and NIH-BioLINCC approval, but is built to analyze the NIH-BioLINCC versions of the SPRINT-Pop and ACCORD-BP datasets.. 
+# This code does not contain the data itself, which requires IRB and NIH-BioLINCC approval, but is built to analyze the NIH-BioLINCC versions of the SPRINT-Pop and ACCORD-BP datasets.
+# Note that we do not use the composite Framingham risk score included in the SPRINT-Pop dataset, as we found this to be erroneously calculated in the original release of the SPRINT-Pop dataset.
 
 setwd("~/Data/sprint_pop/data")
 
