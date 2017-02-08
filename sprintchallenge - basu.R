@@ -162,13 +162,6 @@ GND.result=GND.calib(pred=estinc_c, tvar=c$fu.time, out=c$status,
                      cens.t=adm.cens, groups=c$dec, adm.cens=adm.cens)
 GND.result
 ci.cvAUC(estinc_c,c$cvd)
-chartable =describeBy(c,c$INTENSIVE,mat=TRUE)
-chartable
-chartable[is.na(chartable)]=0
-for (i in dim(chartable[1])){
-  print(i)
-  print(prop.test(x=c(chartable[i,5],chartable[i-1,5]), n=c(chartable[i,4],chartable[i-1,4]), correct=FALSE))
-}
 
 #### gen adverse events outcome model ####
 testsubset = data.frame(dOutcome,
