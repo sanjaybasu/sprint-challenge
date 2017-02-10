@@ -289,31 +289,32 @@ server = function(input, output) {
   
   output$surv_cvd = renderImage({
     if (input$diabetes == 0) {
-      if (score() == 0) {list(src = "challenge figs/score0nodmcvd.png")}
-      else if (score() == 1) {list(src = "challenge figs/score1nodmcvd.png")}
-      else if (score() == 2) {list(src = "challenge figs/score2nodmcvd.png")}
-      else {list(src = "challenge figs/score3nodmcvd.png")}
+      if (score() == 0) {list(src = "score0nodmcvd.png")}
+      else if (score() == 1) {list(src = "score1nodmcvd.png")}
+      else if (score() == 2) {list(src = "score2nodmcvd.png")}
+      else {list(src = "score3nodmcvd.png")}
     } else {
-      if (score() == 0) {list(src = "challenge figs/score0wdmcvd.png")}
-      else if (score() == 1) {list(src = "challenge figs/score1wdmcvd.png")}
-      else if (score() == 2) {list(src = "challenge figs/score2wdmcvd.png")}
-      else {list(src = "challenge figs/score3wdmcvd.png")}
+      if (score() == 0) {list(src = "score0wdmcvd.png")}
+      else if (score() == 1) {list(src = "score1wdmcvd.png")}
+      else if (score() == 2) {list(src = "score2wdmcvd.png")}
+      else {list(src = "score3wdmcvd.png")}
     }
   }, deleteFile = FALSE)
   
   output$surv_sae = renderImage({
     if (input$diabetes == 0) {
-      if (score() == 0) {list(src = "challenge figs/score0nodmsae.png")}
-      else if (score() == 1) {list(src = "challenge figs/score1nodmsae.png")}
-      else if (score() == 2) {list(src = "challenge figs/score2nodmsae.png")}
-      else {list(src = "challenge figs/score3nodmsae.png")}
+      if (score() == 0) {list(src = "score0nodmsae.png")}
+      else if (score() == 1) {list(src = "score1nodmsae.png")}
+      else if (score() == 2) {list(src = "score2nodmsae.png")}
+      else {list(src = "score3nodmsae.png")}
     } else {
-      if (score() == 0) {list(src = "challenge figs/score0wdmsae.png")}
-      else if (score() == 1) {list(src = "challenge figs/score1wdmsae.png")}
-      else if (score() == 2) {list(src = "challenge figs/score2wdmsae.png")}
-      else {list(src = "challenge figs/score3wdmsae.png")}
+      if (score() == 0) {list(src = "score0wdmsae.png")}
+      else if (score() == 1) {list(src = "score1wdmsae.png")}
+      else if (score() == 2) {list(src = "score2wdmsae.png")}
+      else {list(src = "score3wdmsae.png")}
     }
   }, deleteFile = FALSE)
 }
 
 shinyApp(ui = ui, server = server)
+
