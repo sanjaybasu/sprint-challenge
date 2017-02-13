@@ -14,6 +14,7 @@ Sanjay Basu, M.D., Ph.D.,1,2* Jeremy B. Sussman, M.D., M.S.3,4, Joseph Rigdon, P
 4 Center for Clinical Management Research, Veterans Affairs Ann Arbor Healthcare System
 5 Quantitative Sciences Unit, Stanford University
 6 Department of Industrial and Operations Engineering, University of Michigan
+
 Thanks to RA's Vishnu Shankar and Jonas Kemp for coding the online score calculator and Shiny app.
 
 *Email: basus@stanford.edu
