@@ -17,6 +17,6 @@ Sanjay Basu, M.D., Ph.D.,1,2* Jeremy B. Sussman, M.D., M.S.3,4, Joseph Rigdon, P
 
 *Email: basus@stanford.edu
 
-Thanks to Jonas Kemp for creating the GUI calculator in Shiny.
+Thanks to students Vishnu Shankar and Jonas Kemp for creating the online score calculator and Shiny app.
 
 <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by-nc-sa/4.0/80x15.png" /></a><br />This work is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License</a>.
