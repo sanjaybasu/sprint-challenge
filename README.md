@@ -2,6 +2,7 @@
 The sprintchallenge-basu.R code [ https://github.com/sanjaybasu/sprint-challenge/blob/master/sprintchallenge%20-%20basu.R ] develops a clinical decision score, which may help clinicians to identify patients most likely to experience greater benefits, and fewer risks, from undergoing intensive blood pressure treatment. The score was developed from SPRINT trial data, and tested using both SPRINT trial and ACCORD-BP trial data. 
 
 An automated online score calculator is available at: https://sanjaybasu.shinyapps.io/shinyapp/
+
 Those who prefer an HTML to a Shiny/R calculator can use the alternative calculator at: http://web.stanford.edu/~basus/sprint/
 
 Authors: 
