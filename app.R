@@ -1,8 +1,11 @@
-# This code implements an automated GUI score calculator using the Shiny package in R.
-#
+# AN AUTOMATED VERSION OF THIS SCORE CALCULATOR WILL BE MADE AVAILABLE CONCURRENT WITH PEER-REVIEWED PUBLICAITON (FORTHCOMING)
+# AT: http://sanjaybasu.shinyapps.io/shinyapp/
+
+# This code implements the GUI score calculator using the Shiny package in R.
+
 # INSTRUCTIONS:
 # (1) install the shiny package from CRAN
-# (2) ensure the survival curve files from the following website are downloaded to the working directory for the survival curve tab to work: https://stanfordmedicine.box.com/s/y0dd7j64v4irwfzfbtyjslnok5qvzz9o
+# (2) ensure the survival curve files from the following website (available concurrent with publication, forthcoming) are downloaded to the working directory for the survival curve tab to work: https://stanfordmedicine.box.com/s/y0dd7j64v4irwfzfbtyjslnok5qvzz9o
 
 library(shiny)
 
