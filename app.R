@@ -1,3 +1,5 @@
+# The work listed here is currently in the process of review for publication. Please do not plagiarize it (for basic human decency reasons, and because we will shame you publicly when you inevitably are caught). Once published, we will release it under an open license
+
 # AN AUTOMATED VERSION OF THIS SCORE CALCULATOR WILL BE MADE AVAILABLE CONCURRENT WITH PEER-REVIEWED PUBLICATION (FORTHCOMING)
 # AT: http://sanjaybasu.shinyapps.io/shinyapp/
 
