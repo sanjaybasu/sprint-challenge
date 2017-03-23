@@ -1,4 +1,4 @@
-# The work listed here is currently in the process of review for publication. Please do not plagiarize it (for basic human decency reasons, and because we will shame you publicly when you inevitably are caught). Once published, we will release it under the following license:
+# The work listed here is currently in the process of review for publication. Please do not plagiarize it (for basic human decency reasons, and because we will shame you publicly when you inevitably are caught). Once published, we will release it under an open access license
 
 # SPRINT Challenge entry, Sanjay Basu et al., basus@stanford.edu
 
