@@ -1,3 +1,5 @@
+# The work listed here is currently in the process of review for publication. Please do not plagiarize it (for basic human decency reasons, and because we will shame you publicly when you inevitably are caught). Once published, we will release it under an open access license
+
 # SPRINT Challenge entry, Sanjay Basu et al., basus@stanford.edu
 
 # INSTRUCTIONS: install packages as commented out under 'load packages' header', and set all working directory calls (setwd) and load/save commands to appropriate directories on your local machine, to load/save data from your desired location. 
