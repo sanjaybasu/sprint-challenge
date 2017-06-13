@@ -14,9 +14,5 @@ Sanjay Basu, M.D., Ph.D.,1,2* Jeremy B. Sussman, M.D., M.S.3,4, Joseph Rigdon, P
 6 Department of Industrial and Operations Engineering, University of Michigan
 
 *to whom correspondence should be addressed:
-1070 Arastradero Road Office 282, MC 5560
-Palo Alto, CA 94304
-Telephone: (650) 498-5678
-Fax: (650) 498-8258
 Email: basus@stanford.edu
 
