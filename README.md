@@ -4,6 +4,9 @@
 Development and Validation of Clinical Risk Scores 
 for Benefit and Harm from Intensive Blood Pressure Treatment
 
+Also see:
+https://github.com/sanjaybasu/riskmodeling/
+
 Sanjay Basu, M.D., Ph.D.,1,2* Jeremy B. Sussman, M.D., M.S.3,4, Joseph Rigdon, Ph.D.,5 Lauren Steimle, M.S.E.,6 Brian Denton, Ph.D.,6 Rod A. Hayward, M.D.3,4
 
 1 Center for Population Health Sciences, and Center for Primary Care and Outcomes Research, Departments of Medicine and of Health Research and Policy, Stanford University
