@@ -717,7 +717,6 @@ accord_set = merge(accord_set,lipids_cut,by="MaskID")
 accord_set = merge(accord_set,otherlabs_cut,by="MaskID")
 save.image("~/Data/sprint_pop/data/accord_cut.RData")
 
-#### test CVD model on accord without recalibration ####
 load("~/Data/sprint_pop/data/accord_cut.RData")
 cvd = (accord_set$censor_nmi==0)|(accord_set$censor_nst==0)|(accord_set$censor_cm==0)|(accord_set$censor_chf==0)|(accord_set$censor_maj==0)
 t_censor = rowMaxs(cbind(accord_set$fuyrs_nmi*365.25,accord_set$fuyrs_nst*365.25,accord_set$fuyrs_cm*365.25,accord_set$fuyrs_chf*365.25,accord_set$fuyrs_maj*365.25))
@@ -786,7 +785,6 @@ GND.result
 ci.cvAUC(estinc_c2,c2$cvd)
 
 
-#### test SAE model on accord without recalibration ####
 d2<-c2
 d2=d2[complete.cases(d2),]
 adm.cens=5*365.25
