@@ -448,7 +448,7 @@ abline(v=0, col = "gray60")
 
 
 #### score vs SPRINT outcomes ####
-bencats = c(.01,.03)#c(quantile(netben,na.rm=TRUE,probs=c(1/3)),quantile(netben,na.rm=TRUE,probs=c(2/3))) #
+bencats = c(.01,.03)
 bencat = 1*(netben<bencats[1])+
   2*((netben>=bencats[1])&(netben<bencats[2]))+
   3*((netben>=bencats[2]))
@@ -463,9 +463,8 @@ x2i = cvdtable[4:6,5]*cvdtable[4:6,6]
 t1i = cvdtabletimes[1:3,5]*cvdtabletimes[1:3,6]
 t2i = cvdtabletimes[4:6,5]*cvdtabletimes[4:6,6]
 rma(measure="IR", x1i, x2i, t1i, t2i, method="REML")
-survdiff(Surv(pv$t_cvds, pv$cvd)~ bencat+strata(pv$INTENSIVE))
 
-harmcats = c(.005,.04)#c(quantile(netharm,na.rm=TRUE,probs=c(1/3)),quantile(netharm,na.rm=TRUE,probs=c(2/3))) #
+harmcats = c(.005,.04)
 harmcat = 1*(netharm<harmcats[1])+
   2*((netharm>=harmcats[1])&(netharm<harmcats[2]))+
   3*((netharm>=harmcats[2]))
@@ -480,10 +479,7 @@ x2i = saetable[4:6,5]*saetable[4:6,6]
 t1i = saetabletimes[1:3,5]*saetabletimes[1:3,6]
 t2i = saetabletimes[4:6,5]*saetabletimes[4:6,6]
 rma(measure="IR", x1i, x2i, t1i, t2i, method="REML")
-survdiff(Surv(pv$t_saes, pv$sae)~ harmcat+strata(pv$INTENSIVE))
-  
-table(bencat,harmcat)
-table(bencat,harmcat)/sum(table(bencat,harmcat))
+
 
 
 
@@ -1045,7 +1041,7 @@ legend(-.4, .5, c("SPRINT", "ACCORD-BP"), col = c(rgb(30,144,255,255,maxColorVal
 
 
 #### score vs ACCORD outcomes ####
-bencats = c(.01,.03)#c(quantile(netben,na.rm=TRUE,probs=c(1/3)),quantile(netben,na.rm=TRUE,probs=c(2/3)))
+bencats = c(.01,.03)
 bencat = 1*(netben<bencats[1])+
   2*((netben>=bencats[1])&(netben<bencats[2]))+
   3*((netben>=bencats[2]))
@@ -1060,9 +1056,8 @@ x2i = cvdtable[4:6,5]*cvdtable[4:6,6]
 t1i = cvdtabletimes[1:3,5]*cvdtabletimes[1:3,6]
 t2i = cvdtabletimes[4:6,5]*cvdtabletimes[4:6,6]
 rma(measure="IR", x1i, x2i, t1i, t2i, method="REML")
-survdiff(Surv(pv$t_cvds, pv$cvd)~ bencat+strata(pv$INTENSIVE))
 
-harmcats = c(.005,.04)#c(quantile(netharm,na.rm=TRUE,probs=c(1/3)),quantile(netharm,na.rm=TRUE,probs=c(2/3)))#
+harmcats = c(.005,.04)
 harmcat = 1*(netharm<harmcats[1])+
   2*((netharm>=harmcats[1])&(netharm<harmcats[2]))+
   3*((netharm>=harmcats[2]))
@@ -1077,9 +1072,6 @@ x2i = saetable[4:6,5]*saetable[4:6,6]
 t1i = saetabletimes[1:3,5]*saetabletimes[1:3,6]
 t2i = saetabletimes[4:6,5]*saetabletimes[4:6,6]
 rma(measure="IR", x1i, x2i, t1i, t2i, method="REML")
-survdiff(Surv(pv$t_saes, pv$sae)~ harmcat+strata(pv$INTENSIVE))
 
-table(bencat,harmcat)
-table(bencat,harmcat)/sum(table(bencat,harmcat))
 
 
