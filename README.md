@@ -1,7 +1,4 @@
-# SPRINT Data Challenge
-
-
-Development and Validation of Clinical Risk Scores for Benefit and Harm from Intensive Blood Pressure Treatment
+# Development and Validation of Clinical Risk Scores for Benefit and Harm from Intensive Blood Pressure Treatment
 
 Also see:
 https://github.com/sanjaybasu/riskmodeling/
