@@ -1,8 +1,7 @@
-# The work listed here is currently in the process of review for publication. Please do not plagiarize it (for basic human decency reasons, and because we will shame you publicly when you inevitably are caught). Once published, we will release it under an open access license
+# Code for SPRINT clinical decision score replication
+# Sanjay Basu, basus@stanford.edu
 
-# SPRINT Challenge entry, Sanjay Basu et al., basus@stanford.edu
-
-# INSTRUCTIONS: install packages as commented out under 'load packages' header', and set all working directory calls (setwd) and load/save commands to appropriate directories on your local machine, to load/save data from your desired location. 
+# INSTRUCTIONS: set all working directory calls (setwd) and load/save commands to appropriate directories on your local machine, to load/save data from/to your desired location. 
 # This code does not contain the data itself, which requires IRB and NIH-BioLINCC approval, but is built to analyze the NIH-BioLINCC versions of the SPRINT-Pop and ACCORD-BP datasets.
 # Note that we do not use the composite Framingham risk score included in the SPRINT-Pop dataset, as we found this to be erroneously calculated in the original release of the SPRINT-Pop dataset.
 
@@ -10,22 +9,24 @@ setwd("~/Data/sprint_pop/data")
 
 #### load packages ####
 
-# install.packages('sas7bdat')
-# install.packages('gdata')
-# install.packages('glmnet') # https://web.stanford.edu/~hastie/glmnet/glmnet_alpha.html
-# install.packages('Hmisc')
-# install.packages('survival')
-# install.packages('matrixStats')
-# install.packages('doMC')
-# install.packages('doBy')
-# install.packages('cvAUC')
-# install.packages('survivalROC')
-# install.packages('psych')
-# install.packages('metafor')
-# install.packages('survminer')
-# install.packages('mvmeta')
-# install.packages('survMisc')
-# install.packages('RTCGA.clinical')
+install.packages('sas7bdat')
+install.packages('gdata')
+install.packages('glmnet') # https://web.stanford.edu/~hastie/glmnet/glmnet_alpha.html
+install.packages('Hmisc')
+install.packages('survival')
+install.packages('matrixStats')
+install.packages('doMC')
+install.packages('doBy')
+install.packages('cvAUC')
+install.packages('survivalROC')
+install.packages('psych')
+install.packages('metafor')
+install.packages('survminer')
+install.packages('mvmeta')
+install.packages('survMisc')
+install.packages('RTCGA.clinical')
+install.packages('survIDINRI')
+install.packages('corrgram')
 
 library(sas7bdat)
 library(gdata)
@@ -43,6 +44,8 @@ library(survminer)
 library(mvmeta)
 library(survMisc)
 library(RTCGA.clinical)
+library(survIDINRI)
+library(corrgram)
 registerDoMC(cores=4)
 
 #### merge sprintpop data ####
@@ -89,7 +92,7 @@ GND.calib = function(pred, tvar, out, cens.t, groups, adm.cens){
   groups=sort(unique(datause$dec))
   kmtab=matrix(unlist(lapply(groups,kmdec,"dec",datain=datause, adm.cens)),ncol=5, byrow=TRUE)
   if (any(kmtab[,5] == -1)) stop("Stopped because at least one of the groups contains <2 events. Consider collapsing some groups.")
-  else if (any(kmtab[,5] == 1)) warning("At least one of the groups contains < 5 events. GND can become unstable.\ 
+  else if (any(kmtab[,5] == 1)) warning("At least one of the groups contains < 5 events. GND can become unstable.\
                                         (see Demler, Paynter, Cook 'Tests of Calibration and Goodness of Fit in the Survival Setting' DOI: 10.1002/sim.6428) \
                                         Consider collapsing some groups to avoid this problem.")
   hltab=data.frame(group=kmtab[,4],
@@ -106,21 +109,22 @@ GND.calib = function(pred, tvar, out, cens.t, groups, adm.cens){
   print(hltab[c(1,2,3,4,10,5,6,9,7,11)], digits=4)
   plot(tapply(datause$pred,datause$dec,mean),1-kmtab[,1],xlab="Expected K-M rate",ylab="Observed K-M rate",xlim=c(0,1),ylim=c(0,1))
   abline(a=0,b=1, col = "gray60")
-  c(df=numcat-1, chi2gw=sum(hltab$GND_component),pvalgw=1-pchisq(sum(hltab$GND_component),numcat-1))
+  calline = lm(hltab$kmperc~hltab$expectedperc)
+  c(df=numcat-1, chi2gw=sum(hltab$GND_component),pvalgw=1-pchisq(sum(hltab$GND_component),numcat-1),slope=calline$coefficients[2],intercept = calline$coefficients[1])
 }
 hisp = (RACE4=="HISPANIC")
 currentsmoker = (SMOKE_3CAT==3)
 formersmoker = (SMOKE_3CAT==2)
-cvd = (EVENT_MI==1)|(EVENT_STROKE==1)|(EVENT_CVDDEATH==1)
-t_censor = rowMaxs(cbind(T_MI,T_STROKE,T_CVDDEATH))
-t_cvds = rowMaxs(cbind(T_MI*EVENT_MI,T_STROKE*EVENT_STROKE,T_CVDDEATH*EVENT_CVDDEATH))
+cvd = (EVENT_MI==1)|(EVENT_STROKE==1)|(EVENT_CVDDEATH==1)|(EVENT_HF==1)
+t_censor = rowMaxs(cbind(T_MI,T_STROKE,T_CVDDEATH,T_HF))
+t_cvds = rowMaxs(cbind(T_MI*EVENT_MI,T_STROKE*EVENT_STROKE,T_CVDDEATH*EVENT_CVDDEATH,T_HF*EVENT_HF))
 t_cvds[t_cvds==0] = t_censor[t_cvds==0]
 t_cvds[t_cvds==0] = 'NA'
 t_cvds = as.numeric(t_cvds)
 cOutcome = Surv(time=t_cvds, event = cvd)
-sae = (HYP_SAE_EVNT==1)|(SYN_SAE_EVNT==1)|(ELE_SAE_EVNT==1)|(AKI_SAE_EVNT==1) #|(BRA_SAE_EVNT==1)
-t_censor = rowMaxs(cbind(HYP_SAE_DAYS,SYN_SAE_DAYS,ELE_SAE_DAYS,AKI_SAE_DAYS)) #,BRA_SAE_DAYS
-t_saes = rowMaxs(cbind(HYP_SAE_DAYS*HYP_SAE_EVNT,SYN_SAE_DAYS*SYN_SAE_EVNT,ELE_SAE_DAYS*ELE_SAE_EVNT,AKI_SAE_DAYS*AKI_SAE_EVNT)) #,BRA_SAE_DAYS*BRA_SAE_EVNT
+sae = (HYP_SAE_EVNT==1)|(SYN_SAE_EVNT==1)|(ELE_SAE_EVNT==1)|(AKI_SAE_EVNT==1)|(BRA_SAE_EVNT==1)|(INJ_SAE_EVNT==1)
+t_censor = rowMaxs(cbind(HYP_SAE_DAYS,SYN_SAE_DAYS,ELE_SAE_DAYS,AKI_SAE_DAYS,BRA_SAE_DAYS,INJ_SAE_DAYS)) 
+t_saes = rowMaxs(cbind(HYP_SAE_DAYS*HYP_SAE_EVNT,SYN_SAE_DAYS*SYN_SAE_EVNT,ELE_SAE_DAYS*ELE_SAE_EVNT,AKI_SAE_DAYS*AKI_SAE_EVNT,BRA_SAE_DAYS*BRA_SAE_EVNT,INJ_SAE_DAYS*INJ_SAE_EVNT)) 
 t_saes[t_saes==0] = t_censor[t_saes==0]
 t_saes[t_saes==0] = 'NA'
 t_saes = as.numeric(t_saes)
@@ -129,11 +133,11 @@ testsubset = data.frame(cOutcome,
                         INTENSIVE,AGE,FEMALE,RACE_BLACK,hisp,
                         SBP.y,DBP.y,N_AGENTS,currentsmoker,formersmoker,
                         ASPIRIN,STATIN,
-                        SCREAT,CHR,HDL,TRR,UMALCR,BMI,
+                        SCREAT,CHR,HDL,TRR,BMI,
                         INTENSIVE*AGE,INTENSIVE*FEMALE,INTENSIVE*RACE_BLACK,INTENSIVE*hisp,
                         INTENSIVE*SBP.y,INTENSIVE*DBP.y,INTENSIVE*N_AGENTS,INTENSIVE*currentsmoker,INTENSIVE*formersmoker,
                         INTENSIVE*ASPIRIN,INTENSIVE*STATIN,
-                        INTENSIVE*SCREAT,INTENSIVE*CHR,INTENSIVE*HDL,INTENSIVE*TRR,INTENSIVE*UMALCR,INTENSIVE*BMI)
+                        INTENSIVE*SCREAT,INTENSIVE*CHR,INTENSIVE*HDL,INTENSIVE*TRR,INTENSIVE*BMI)
 testsubset=testsubset[complete.cases(testsubset),]
 cvdmodel.cv =  cv.glmnet(as.matrix(testsubset[,-c(1)]),as.matrix(testsubset[,1]),family="cox", parallel = TRUE)
 plot(cvdmodel.cv)
@@ -143,20 +147,24 @@ c<-data.frame(cvd,t_cvds,sae,t_saes,
               INTENSIVE,AGE,FEMALE,RACE_BLACK,hisp,
               SBP.y,DBP.y,N_AGENTS,currentsmoker,formersmoker,
               ASPIRIN,STATIN,
-              SCREAT,CHR,HDL,TRR,UMALCR,BMI,
+              SCREAT,CHR,HDL,TRR,BMI,
               INTENSIVE*AGE,INTENSIVE*FEMALE,INTENSIVE*RACE_BLACK,INTENSIVE*hisp,
               INTENSIVE*SBP.y,INTENSIVE*DBP.y,INTENSIVE*N_AGENTS,INTENSIVE*currentsmoker,INTENSIVE*formersmoker,
               INTENSIVE*ASPIRIN,INTENSIVE*STATIN,
-              INTENSIVE*SCREAT,INTENSIVE*CHR,INTENSIVE*HDL,INTENSIVE*TRR,INTENSIVE*UMALCR,INTENSIVE*BMI)
+              INTENSIVE*SCREAT,INTENSIVE*CHR,INTENSIVE*HDL,INTENSIVE*TRR,INTENSIVE*BMI)
 c=c[complete.cases(c),]
 adm.cens=5*365.25
 c$fu.time <- pmin(c$t_cvds, adm.cens)
 c$status <- ifelse(as.numeric(adm.cens < c$t_cvds), 0, c$cvd)
-survcox_c<-coxph(data=c, Surv(fu.time, status)~AGE+FEMALE+RACE_BLACK+hisp+SBP.y+
+
+
+
+calt = c
+survcox_c<-coxph(data=c, Surv(fu.time, status)~AGE+FEMALE+RACE_BLACK+hisp+SBP.y+DBP.y+
                    N_AGENTS+currentsmoker+formersmoker+ASPIRIN+STATIN+SCREAT+CHR+
-                   HDL+TRR+UMALCR+BMI+INTENSIVE*FEMALE+INTENSIVE*RACE_BLACK+
-                   INTENSIVE*DBP.y+INTENSIVE*currentsmoker+INTENSIVE*ASPIRIN+
-                   INTENSIVE*STATIN+INTENSIVE*CHR+INTENSIVE*HDL+INTENSIVE*TRR)
+                   HDL+TRR+BMI+INTENSIVE*AGE+INTENSIVE*RACE_BLACK+
+                   INTENSIVE*DBP.y+INTENSIVE*currentsmoker+INTENSIVE*HDL+
+                   INTENSIVE*TRR)
 summary(survcox_c)
 survfit_c=survfit(survcox_c, newdata=c, se.fit=FALSE)
 estinc_c=1-survfit_c$surv[dim(survfit_c$surv)[1],]
@@ -166,16 +174,18 @@ GND.result=GND.calib(pred=estinc_c, tvar=c$fu.time, out=c$status,
 GND.result
 ci.cvAUC(estinc_c,c$cvd)
 
+
+
 #### gen adverse events outcome model ####
 testsubset = data.frame(dOutcome,
                         INTENSIVE,AGE,FEMALE,RACE_BLACK,hisp,
                         SBP.y,DBP.y,N_AGENTS,currentsmoker,formersmoker,
                         ASPIRIN,STATIN,
-                        SCREAT,CHR,HDL,TRR,UMALCR,BMI,
+                        SCREAT,CHR,HDL,TRR,BMI,UMALCR,
                         INTENSIVE*AGE,INTENSIVE*FEMALE,INTENSIVE*RACE_BLACK,INTENSIVE*hisp,
                         INTENSIVE*SBP.y,INTENSIVE*DBP.y,INTENSIVE*N_AGENTS,INTENSIVE*currentsmoker,INTENSIVE*formersmoker,
                         INTENSIVE*ASPIRIN,INTENSIVE*STATIN,
-                        INTENSIVE*SCREAT,INTENSIVE*CHR,INTENSIVE*HDL,INTENSIVE*TRR,INTENSIVE*UMALCR,INTENSIVE*BMI)
+                        INTENSIVE*SCREAT,INTENSIVE*CHR,INTENSIVE*HDL,INTENSIVE*TRR,INTENSIVE*BMI,INTENSIVE*UMALCR)
 testsubset=testsubset[complete.cases(testsubset),]
 saemodel.cv =  cv.glmnet(as.matrix(testsubset[,-c(1)]),as.matrix(testsubset[,1]),family="cox", parallel = TRUE)
 plot(saemodel.cv)
@@ -185,9 +195,12 @@ d<-c
 adm.cens=5*365.25
 d$fu.time <- pmin(d$t_saes, adm.cens)
 d$status <- ifelse(as.numeric(adm.cens < d$t_saes), 0, d$sae)
+dalt = d
+
 survcox_d<-coxph(data=d, Surv(fu.time, status)~AGE+FEMALE+hisp+SBP.y+DBP.y+
-                   N_AGENTS+currentsmoker+formersmoker+SCREAT+CHR+HDL+UMALCR+BMI+
-                   INTENSIVE*FEMALE+INTENSIVE*STATIN+INTENSIVE*SCREAT+INTENSIVE*TRR+INTENSIVE*UMALCR)
+                   N_AGENTS+currentsmoker+formersmoker+ASPIRIN+SCREAT+CHR+HDL+
+                   INTENSIVE*FEMALE+INTENSIVE*currentsmoker+INTENSIVE*STATIN+INTENSIVE*SCREAT+
+                   INTENSIVE*CHR+INTENSIVE*TRR)
 summary(survcox_d)
 survfit_d=survfit(survcox_d, newdata=d, se.fit=FALSE)
 estinc_d=1-survfit_d$surv[dim(survfit_d$surv)[1],]
@@ -197,18 +210,20 @@ GND.result=GND.calib(pred=estinc_d, tvar=d$fu.time, out=d$status,
 GND.result
 ci.cvAUC(estinc_d,d$sae)
 
-#### clin pred score development ####
+
+
+#### C/GDN ####
 INTENSIVE = sprint_set$INTENSIVE
 INTENSIVE[INTENSIVE==0]=1
 cint<-data.frame(cvd,t_cvds,sae,t_saes,
                  INTENSIVE,AGE,FEMALE,RACE_BLACK,hisp,
                  SBP.y,DBP.y,N_AGENTS,currentsmoker,formersmoker,
                  ASPIRIN,STATIN,
-                 SCREAT,CHR,HDL,TRR,UMALCR,BMI,
+                 SCREAT,CHR,HDL,TRR,BMI,
                  INTENSIVE*AGE,INTENSIVE*FEMALE,INTENSIVE*RACE_BLACK,INTENSIVE*hisp,
                  INTENSIVE*SBP.y,INTENSIVE*DBP.y,INTENSIVE*N_AGENTS,INTENSIVE*currentsmoker,INTENSIVE*formersmoker,
                  INTENSIVE*ASPIRIN,INTENSIVE*STATIN,
-                 INTENSIVE*SCREAT,INTENSIVE*CHR,INTENSIVE*HDL,INTENSIVE*TRR,INTENSIVE*UMALCR,INTENSIVE*BMI)
+                 INTENSIVE*SCREAT,INTENSIVE*CHR,INTENSIVE*HDL,INTENSIVE*TRR,INTENSIVE*BMI)
 cint=cint[complete.cases(cint),]
 adm.cens=5*365.25
 cint$fu.time <- pmin(cint$t_cvds, adm.cens)
@@ -221,11 +236,11 @@ cstd<-data.frame(cvd,t_cvds,sae,t_saes,
                  INTENSIVE,AGE,FEMALE,RACE_BLACK,hisp,
                  SBP.y,DBP.y,N_AGENTS,currentsmoker,formersmoker,
                  ASPIRIN,STATIN,
-                 SCREAT,CHR,HDL,TRR,UMALCR,BMI,
+                 SCREAT,CHR,HDL,TRR,BMI,
                  INTENSIVE*AGE,INTENSIVE*FEMALE,INTENSIVE*RACE_BLACK,INTENSIVE*hisp,
                  INTENSIVE*SBP.y,INTENSIVE*DBP.y,INTENSIVE*N_AGENTS,INTENSIVE*currentsmoker,INTENSIVE*formersmoker,
                  INTENSIVE*ASPIRIN,INTENSIVE*STATIN,
-                 INTENSIVE*SCREAT,INTENSIVE*CHR,INTENSIVE*HDL,INTENSIVE*TRR,INTENSIVE*UMALCR,INTENSIVE*BMI)
+                 INTENSIVE*SCREAT,INTENSIVE*CHR,INTENSIVE*HDL,INTENSIVE*TRR,INTENSIVE*BMI)
 cstd=cstd[complete.cases(cstd),]
 adm.cens=5*365.25
 cstd$fu.time <- pmin(cstd$t_cvds, adm.cens)
@@ -240,232 +255,238 @@ survfit_dstd=survfit(survcox_d, newdata=cstd, se.fit=FALSE)
 estinc_dstd=1-survfit_dstd$surv[dim(survfit_dstd$surv)[1],]
 risk = estinc_dint-estinc_dstd
 hist(risk,xlab="Predicted increase in serious adverse events \n from intensive treatment (probability)")
-benriskdiff = benefit - risk
-hist(benriskdiff)
-plot(benefit,risk, xlim=c(-.2,.4),ylim=c(-.2,.4),xlab="Predicted reduction in CVD events/death", ylab="Predicted increase in serious adverse events")
-abline(a=0,b=1, col = "gray60")
+plot(benefit,risk, xlim=c(-.1,.5),ylim=c(-.1,.5),xlab="Predicted absolute risk reduction in CVD events/death", ylab="Predicted absolute risk increase in serious adverse events", col=rgb(0,0,100,50,maxColorValue=255), pch=19)
 abline(a=0,b=0, col = "gray60")
 abline(v=0, col = "gray60")
-predsubset = data.frame(benriskdiff,
-                        c$AGE,c$FEMALE,c$RACE_BLACK,c$hisp,c$SBP.y,c$DBP.y,c$N_AGENTS,c$currentsmoker,c$formersmoker,
-                        c$ASPIRIN,c$STATIN,c$SCREAT,c$CHR,c$HDL,c$TRR,c$UMALCR,c$BMI)
-predsubset=predsubset[complete.cases(predsubset),]
-benriskmodel.cv =  cv.glmnet(as.matrix(predsubset[,-c(1)]),as.matrix(predsubset[,1]),parallel = TRUE)
-plot(benriskmodel.cv)
-benriskmodel.cv
-benriskmodel = lm(benriskdiff~AGE+FEMALE+RACE_BLACK+hisp+SBP.y+N_AGENTS+currentsmoker+ASPIRIN+STATIN+SCREAT+CHR+HDL+UMALCR, data=cint)
-summary(benriskmodel)
+
+sprintbenefit = benefit
+sprintrisk = risk
+
+INTENSIVE = sprint_set$INTENSIVE
+pv = c
+pv$fu.time <- pmin(c$t_cvds, adm.cens)
+pv$status <- ifelse(as.numeric(adm.cens < c$t_cvds), 0, c$cvd)
+
+betax=(survcox_c$coefficients[1]*pv$AGE+
+         survcox_c$coefficients[2]*pv$FEMALE+
+         survcox_c$coefficients[3]*pv$RACE_BLACK+
+         survcox_c$coefficients[4]*pv$hisp+
+         survcox_c$coefficients[5]*pv$SBP.y+
+         survcox_c$coefficients[6]*pv$DBP.y+
+         survcox_c$coefficients[7]*pv$N_AGENTS+
+         survcox_c$coefficients[8]*pv$currentsmoker+
+         survcox_c$coefficients[9]*pv$formersmoker+
+         survcox_c$coefficients[10]*pv$ASPIRIN+
+         survcox_c$coefficients[11]*pv$STATIN+
+         survcox_c$coefficients[12]*pv$SCREAT+
+         survcox_c$coefficients[13]*pv$CHR+
+         survcox_c$coefficients[14]*pv$HDL+
+         survcox_c$coefficients[15]*pv$TRR+
+         survcox_c$coefficients[16]*pv$BMI+
+         survcox_c$coefficients[17]*pv$INTENSIVE+
+         survcox_c$coefficients[18]*pv$INTENSIVE*pv$AGE+
+         survcox_c$coefficients[19]*pv$INTENSIVE*pv$RACE_BLACK+
+         survcox_c$coefficients[20]*pv$INTENSIVE*pv$DBP.y+
+         survcox_c$coefficients[21]*pv$INTENSIVE*pv$currentsmoker+
+         survcox_c$coefficients[22]*pv$INTENSIVE*pv$HDL+
+         survcox_c$coefficients[23]*pv$INTENSIVE*pv$TRR)
+cvdpred = 1 - .943^exp(betax-mean(na.omit(betax)))
+estinc_e=cvdpred
+pv$dec=as.numeric(cut2(estinc_e, g=10))
+GND.result=GND.calib(pred=estinc_e, tvar=pv$fu.time, out=pv$status, 
+                     cens.t=adm.cens, groups=pv$dec, adm.cens=adm.cens)
+GND.result
+ci.cvAUC(estinc_e,pv$cvd)
+
+benpredbetaint = (survcox_c$coefficients[1]*pv$AGE+
+                    survcox_c$coefficients[2]*pv$FEMALE+
+                    survcox_c$coefficients[3]*pv$RACE_BLACK+
+                    survcox_c$coefficients[4]*pv$hisp+
+                    survcox_c$coefficients[5]*pv$SBP.y+
+                    survcox_c$coefficients[6]*pv$DBP.y+
+                    survcox_c$coefficients[7]*pv$N_AGENTS+
+                    survcox_c$coefficients[8]*pv$currentsmoker+
+                    survcox_c$coefficients[9]*pv$formersmoker+
+                    survcox_c$coefficients[10]*pv$ASPIRIN+
+                    survcox_c$coefficients[11]*pv$STATIN+
+                    survcox_c$coefficients[12]*pv$SCREAT+
+                    survcox_c$coefficients[13]*pv$CHR+
+                    survcox_c$coefficients[14]*pv$HDL+
+                    survcox_c$coefficients[15]*pv$TRR+
+                    survcox_c$coefficients[16]*pv$BMI+
+                    survcox_c$coefficients[17]*1+
+                    survcox_c$coefficients[18]*1*pv$AGE+
+                    survcox_c$coefficients[19]*1*pv$RACE_BLACK+
+                    survcox_c$coefficients[20]*1*pv$DBP.y+
+                    survcox_c$coefficients[21]*1*pv$currentsmoker+
+                    survcox_c$coefficients[22]*1*pv$HDL+
+                    survcox_c$coefficients[23]*1*pv$TRR)
+benintpred = 1 - .943^exp(benpredbetaint-mean(na.omit(betax)))
+
+benpredbetastd = (survcox_c$coefficients[1]*pv$AGE+
+                    survcox_c$coefficients[2]*pv$FEMALE+
+                    survcox_c$coefficients[3]*pv$RACE_BLACK+
+                    survcox_c$coefficients[4]*pv$hisp+
+                    survcox_c$coefficients[5]*pv$SBP.y+
+                    survcox_c$coefficients[6]*pv$DBP.y+
+                    survcox_c$coefficients[7]*pv$N_AGENTS+
+                    survcox_c$coefficients[8]*pv$currentsmoker+
+                    survcox_c$coefficients[9]*pv$formersmoker+
+                    survcox_c$coefficients[10]*pv$ASPIRIN+
+                    survcox_c$coefficients[11]*pv$STATIN+
+                    survcox_c$coefficients[12]*pv$SCREAT+
+                    survcox_c$coefficients[13]*pv$CHR+
+                    survcox_c$coefficients[14]*pv$HDL+
+                    survcox_c$coefficients[15]*pv$TRR+
+                    survcox_c$coefficients[16]*pv$BMI+
+                    survcox_c$coefficients[17]*0+
+                    survcox_c$coefficients[18]*0*pv$AGE+
+                    survcox_c$coefficients[19]*0*pv$RACE_BLACK+
+                    survcox_c$coefficients[20]*0*pv$DBP.y+
+                    survcox_c$coefficients[21]*0*pv$currentsmoker+
+                    survcox_c$coefficients[22]*0*pv$HDL+
+                    survcox_c$coefficients[23]*0*pv$TRR)
+benstdpred = 1 - .943^exp(benpredbetastd-mean(na.omit(betax)))
+
+netben = benstdpred-benintpred 
+hist(netben)
+
+
+
+
+
+
+pv$fu.time <- pmin(c$t_saes, adm.cens)
+pv$status <- ifelse(as.numeric(adm.cens < c$t_saes), 0, c$sae)
+betax=(survcox_d$coefficients[1]*pv$AGE+
+         survcox_d$coefficients[2]*pv$FEMALE+
+         survcox_d$coefficients[3]*pv$hisp+
+         survcox_d$coefficients[4]*pv$SBP.y+
+         survcox_d$coefficients[5]*pv$DBP.y+
+         survcox_d$coefficients[6]*pv$N_AGENTS+
+         survcox_d$coefficients[7]*pv$currentsmoker+
+         survcox_d$coefficients[8]*pv$formersmoker+
+         survcox_d$coefficients[9]*pv$ASPIRIN+
+         survcox_d$coefficients[10]*pv$SCREAT+
+         survcox_d$coefficients[11]*pv$CHR+
+         survcox_d$coefficients[12]*pv$HDL+
+         survcox_d$coefficients[13]*pv$INTENSIVE+
+         survcox_d$coefficients[14]*pv$STATIN+
+         survcox_d$coefficients[15]*pv$TRR+
+         survcox_d$coefficients[16]*pv$FEMALE*pv$INTENSIVE+
+         survcox_d$coefficients[17]*pv$INTENSIVE*pv$currentsmoker+
+         survcox_d$coefficients[18]*pv$STATIN*pv$INTENSIVE+
+         survcox_d$coefficients[19]*pv$INTENSIVE*pv$SCREAT+
+         survcox_d$coefficients[20]*pv$INTENSIVE*pv$CHR+
+         survcox_d$coefficients[21]*pv$INTENSIVE*pv$TRR)
+saepred = 1 - .897^exp(betax-mean(na.omit(betax)))
+estinc_e=saepred
+pv$dec=as.numeric(cut2(estinc_e, g=10))
+GND.result=GND.calib(pred=estinc_e, tvar=pv$fu.time, out=pv$status, 
+                     cens.t=adm.cens, groups=pv$dec, adm.cens=adm.cens)
+GND.result
+ci.cvAUC(estinc_e,pv$sae)
+
+harmpredbetaint = (survcox_d$coefficients[1]*pv$AGE+
+                     survcox_d$coefficients[2]*pv$FEMALE+
+                     survcox_d$coefficients[3]*pv$hisp+
+                     survcox_d$coefficients[4]*pv$SBP.y+
+                     survcox_d$coefficients[5]*pv$DBP.y+
+                     survcox_d$coefficients[6]*pv$N_AGENTS+
+                     survcox_d$coefficients[7]*pv$currentsmoker+
+                     survcox_d$coefficients[8]*pv$formersmoker+
+                     survcox_d$coefficients[9]*pv$ASPIRIN+
+                     survcox_d$coefficients[10]*pv$SCREAT+
+                     survcox_d$coefficients[11]*pv$CHR+
+                     survcox_d$coefficients[12]*pv$HDL+
+                     survcox_d$coefficients[13]*1+
+                     survcox_d$coefficients[14]*pv$STATIN+
+                     survcox_d$coefficients[15]*pv$TRR+
+                     survcox_d$coefficients[16]*pv$FEMALE*1+
+                     survcox_d$coefficients[17]*1*pv$currentsmoker+
+                     survcox_d$coefficients[18]*pv$STATIN*1+
+                     survcox_d$coefficients[19]*1*pv$SCREAT+
+                     survcox_d$coefficients[20]*1*pv$CHR+
+                     survcox_d$coefficients[21]*1*pv$TRR)
+harmintpred = 1 - .897^exp(harmpredbetaint-mean(na.omit(betax)))
+
+harmpredbetastd = (survcox_d$coefficients[1]*pv$AGE+
+                     survcox_d$coefficients[2]*pv$FEMALE+
+                     survcox_d$coefficients[3]*pv$hisp+
+                     survcox_d$coefficients[4]*pv$SBP.y+
+                     survcox_d$coefficients[5]*pv$DBP.y+
+                     survcox_d$coefficients[6]*pv$N_AGENTS+
+                     survcox_d$coefficients[7]*pv$currentsmoker+
+                     survcox_d$coefficients[8]*pv$formersmoker+
+                     survcox_d$coefficients[9]*pv$ASPIRIN+
+                     survcox_d$coefficients[10]*pv$SCREAT+
+                     survcox_d$coefficients[11]*pv$CHR+
+                     survcox_d$coefficients[12]*pv$HDL+
+                     survcox_d$coefficients[13]*0+
+                     survcox_d$coefficients[14]*pv$STATIN+
+                     survcox_d$coefficients[15]*pv$TRR+
+                     survcox_d$coefficients[16]*pv$FEMALE*0+
+                     survcox_d$coefficients[17]*0*pv$currentsmoker+
+                     survcox_d$coefficients[18]*pv$STATIN*0+
+                     survcox_d$coefficients[19]*0*pv$SCREAT+
+                     survcox_d$coefficients[20]*0*pv$CHR+
+                     survcox_d$coefficients[21]*0*pv$TRR)
+harmstdpred = 1 - .897^exp(harmpredbetastd-mean(na.omit(betax)))
+
+netharm = harmintpred-harmstdpred 
+hist(netharm)
+
+netbensprint = netben
+netharmsprint = netharm
+
+
+plot(netben,netharm, xlim=c(-.2,.4),ylim=c(-.2,.4),xlab="Predicted reduction in CVD events/death", ylab="Predicted increase in serious adverse events")
+abline(a=0,b=0, col = "gray60")
+abline(v=0, col = "gray60")
+
+
+
 
 #### score vs SPRINT outcomes ####
-benriskmodel_pred = predict(benriskmodel,sprint_set)
-summary(benriskmodel_pred)
-hist(benriskmodel_pred)
-riskcatquants = c(quantile(benriskmodel_pred,na.rm=TRUE,probs=c(.25)),quantile(benriskmodel_pred,na.rm=TRUE,probs=c(.5)),quantile(benriskmodel_pred,na.rm=TRUE,probs=c(.75)))
-sprintcats = riskcatquants
-riskcat = 1*(benriskmodel_pred<riskcatquants[1])+
-  2*((benriskmodel_pred>=riskcatquants[1])&(benriskmodel_pred<riskcatquants[2]))+
-  3*((benriskmodel_pred>=riskcatquants[2])&(benriskmodel_pred<riskcatquants[3]))+
-  4*(benriskmodel_pred>=riskcatquants[3])
-intensive = sprint_set$INTENSIVE
-benriskquants = c(quantile(benriskdiff,na.rm=TRUE,probs=c(.25)),quantile(benriskdiff,na.rm=TRUE,probs=c(.5)),quantile(benriskdiff,na.rm=TRUE,probs=c(.75)))
-benriskcat = 1*(benriskdiff<benriskquants[1])+
-  2*((benriskdiff>=benriskquants[1])&(benriskdiff<benriskquants[2]))+
-  3*((benriskdiff>=benriskquants[2])&(benriskdiff<benriskquants[3]))+
-  4*(benriskdiff>=benriskquants[3])
-cvdtable = describeBy(cvd,list(riskcat,intensive),mat=TRUE)
+bencats = c(.01,.03)#c(quantile(netben,na.rm=TRUE,probs=c(1/3)),quantile(netben,na.rm=TRUE,probs=c(2/3))) #
+bencat = 1*(netben<bencats[1])+
+  2*((netben>=bencats[1])&(netben<bencats[2]))+
+  3*((netben>=bencats[2]))
+cvdtable = describeBy(pv$cvd,list(bencat,pv$INTENSIVE),mat=TRUE)
 cvdtable
-prop.test(x=c(cvdtable[1,5]*cvdtable[1,6],cvdtable[5,5]*cvdtable[5,6]), n=c(cvdtable[1,5],cvdtable[5,5]), correct=FALSE)
-prop.test(x=c(cvdtable[2,5]*cvdtable[2,6],cvdtable[6,5]*cvdtable[6,6]), n=c(cvdtable[2,5],cvdtable[6,5]), correct=FALSE)
-prop.test(x=c(cvdtable[3,5]*cvdtable[3,6],cvdtable[7,5]*cvdtable[7,6]), n=c(cvdtable[3,5],cvdtable[7,5]), correct=FALSE)
-prop.test(x=c(cvdtable[4,5]*cvdtable[4,6],cvdtable[8,5]*cvdtable[8,6]), n=c(cvdtable[4,5],cvdtable[8,5]), correct=FALSE)
-cvdtabletimes = describeBy(t_cvds,list(riskcat,intensive),mat=TRUE)
-x1i = cvdtable[1:4,5]*cvdtable[1:4,6]
-x2i = cvdtable[5:8,5]*cvdtable[5:8,6]
-t1i = cvdtabletimes[1:4,5]*cvdtabletimes[1:4,6]
-t2i = cvdtabletimes[5:8,5]*cvdtabletimes[5:8,6]
+prop.test(x=c(cvdtable[1,5]*cvdtable[1,6],cvdtable[4,5]*cvdtable[4,6]), n=c(cvdtable[1,5],cvdtable[4,5]), correct=FALSE)
+prop.test(x=c(cvdtable[2,5]*cvdtable[2,6],cvdtable[5,5]*cvdtable[5,6]), n=c(cvdtable[2,5],cvdtable[5,5]), correct=FALSE)
+prop.test(x=c(cvdtable[3,5]*cvdtable[3,6],cvdtable[6,5]*cvdtable[6,6]), n=c(cvdtable[3,5],cvdtable[6,5]), correct=FALSE)
+cvdtabletimes = describeBy(pv$t_cvds,list(bencat,pv$INTENSIVE),mat=TRUE)
+x1i = cvdtable[1:3,5]*cvdtable[1:3,6]
+x2i = cvdtable[4:6,5]*cvdtable[4:6,6]
+t1i = cvdtabletimes[1:3,5]*cvdtabletimes[1:3,6]
+t2i = cvdtabletimes[4:6,5]*cvdtabletimes[4:6,6]
 rma(measure="IR", x1i, x2i, t1i, t2i, method="REML")
-survdiff(Surv(t_cvds, cvd)~ riskcat+strata(sprint_set$INTENSIVE))
-saetable = describeBy(sae,list(riskcat,intensive),mat=TRUE)
+survdiff(Surv(pv$t_cvds, pv$cvd)~ bencat+strata(pv$INTENSIVE))
+
+harmcats = c(.005,.04)#c(quantile(netharm,na.rm=TRUE,probs=c(1/3)),quantile(netharm,na.rm=TRUE,probs=c(2/3))) #
+harmcat = 1*(netharm<harmcats[1])+
+  2*((netharm>=harmcats[1])&(netharm<harmcats[2]))+
+  3*((netharm>=harmcats[2]))
+saetable = describeBy(pv$sae,list(harmcat,pv$INTENSIVE),mat=TRUE)
 saetable
-prop.test(x=c(saetable[1,5]*saetable[1,6],saetable[5,5]*saetable[5,6]), n=c(saetable[1,5],saetable[5,5]), correct=FALSE)
-prop.test(x=c(saetable[2,5]*saetable[2,6],saetable[6,5]*saetable[6,6]), n=c(saetable[2,5],saetable[6,5]), correct=FALSE)
-prop.test(x=c(saetable[3,5]*saetable[3,6],saetable[7,5]*saetable[7,6]), n=c(saetable[3,5],saetable[7,5]), correct=FALSE)
-prop.test(x=c(saetable[4,5]*saetable[4,6],saetable[8,5]*saetable[8,6]), n=c(saetable[4,5],saetable[8,5]), correct=FALSE)
-saetabletimes = describeBy(t_saes,list(riskcat,intensive),mat=TRUE)
-x1i = saetable[1:4,5]*saetable[1:4,6]
-x2i = saetable[5:8,5]*saetable[5:8,6]
-t1i = saetabletimes[1:4,5]*saetabletimes[1:4,6]
-t2i = saetabletimes[5:8,5]*saetabletimes[5:8,6]
+prop.test(x=c(saetable[1,5]*saetable[1,6],saetable[4,5]*saetable[4,6]), n=c(saetable[1,5],saetable[4,5]), correct=FALSE)
+prop.test(x=c(saetable[2,5]*saetable[2,6],saetable[5,5]*saetable[5,6]), n=c(saetable[2,5],saetable[5,5]), correct=FALSE)
+prop.test(x=c(saetable[3,5]*saetable[3,6],saetable[6,5]*saetable[6,6]), n=c(saetable[3,5],saetable[6,5]), correct=FALSE)
+saetabletimes = describeBy(pv$t_saes,list(harmcat,pv$INTENSIVE),mat=TRUE)
+x1i = saetable[1:3,5]*saetable[1:3,6]
+x2i = saetable[4:6,5]*saetable[4:6,6]
+t1i = saetabletimes[1:3,5]*saetabletimes[1:3,6]
+t2i = saetabletimes[4:6,5]*saetabletimes[4:6,6]
 rma(measure="IR", x1i, x2i, t1i, t2i, method="REML")
-survdiff(Surv(t_saes, sae)~ riskcat+strata(sprint_set$INTENSIVE))
-setwd("~/Documents/Epi/Research/NCDs/HTN/SPRINT challenge")
-fit0 <- survfit(Surv(t_cvds[riskcat==1], cvd[riskcat==1]) ~ sprint_set$INTENSIVE[riskcat==1])
-ggsurvplot(
-  fit0,                     
-  fun = "cumhaz",
-  legend = c(0.2,.8),
-  legend.labs=c("Standard","Intensive"),
-  main = "Score = 0, without diabetes",
-  font.legend=c(14),font.x=c(14),font.y=c(14),font.tickslab=c(14),font.main = c(14),
-  xlab = "Days",
-  ylab = "Cumulative hazard \n of CVD events/deaths",
-  risk.table = TRUE,       
-  pval = F,             
-  conf.int = F,          
-  ylim = c(0,.25),
-  xlim = c(0,5*365.25),        
-  break.time.by = 365,     
-  ggtheme = theme_RTCGA(), 
-  risk.table.y.text.col = T, 
-  risk.table.y.text = T 
-)
+survdiff(Surv(pv$t_saes, pv$sae)~ harmcat+strata(pv$INTENSIVE))
+  
+table(bencat,harmcat)
+table(bencat,harmcat)/sum(table(bencat,harmcat))
 
-fit1 <- survfit(Surv(t_cvds[riskcat==2], cvd[riskcat==2]) ~ sprint_set$INTENSIVE[riskcat==2])
-ggsurvplot(
-  fit1,                     
-  fun = "cumhaz",
-  legend.labs=c("Standard","Intensive"),
-  main = "Score = 1, without diabetes",
-  legend = c(0.2,.8),
-  font.legend=c(14),font.x=c(14),font.y=c(14),font.tickslab=c(14),font.main = c(14),
-  xlab = "Days",
-  ylab = "Cumulative hazard \n of CVD events/deaths",
-  risk.table = TRUE,       
-  pval = F,             
-  conf.int = F,          
-  ylim = c(0,.25),
-  xlim = c(0,5*365.25),        
-  break.time.by = 365,     
-  ggtheme = theme_RTCGA(), 
-  risk.table.y.text.col = T, 
-  risk.table.y.text = T 
-)
 
-fit2 <- survfit(Surv(t_cvds[riskcat==3], cvd[riskcat==3]) ~ sprint_set$INTENSIVE[riskcat==3])
-ggsurvplot(
-  fit2,                     
-  fun = "cumhaz",
-  legend = c(0.2,.8),
-  legend.labs=c("Standard","Intensive"),
-  main = "Score = 2, without diabetes",
-  font.legend=c(14),font.x=c(14),font.y=c(14),font.tickslab=c(14),font.main = c(14),
-  xlab = "Days",
-  ylab = "Cumulative hazard \n of CVD events/deaths",
-  risk.table = TRUE,       
-  pval = F,             
-  conf.int = F,          
-  ylim = c(0,.25),
-  xlim = c(0,5*365.25),        
-  break.time.by = 365,     
-  ggtheme = theme_RTCGA(), 
-  risk.table.y.text.col = T, 
-  risk.table.y.text = T 
-)
 
-fit3 <- survfit(Surv(t_cvds[riskcat==4], cvd[riskcat==4]) ~ sprint_set$INTENSIVE[riskcat==4])
-ggsurvplot(
-  fit3,                     
-  fun = "cumhaz",
-  legend = c(0.2,.8),
-  legend.labs=c("Standard","Intensive"),
-  main = "Score = 3, without diabetes",
-  font.legend=c(14),font.x=c(14),font.y=c(14),font.tickslab=c(14),font.main = c(14),
-  xlab = "Days",
-  ylab = "Cumulative hazard \n of CVD events/deaths",
-  risk.table = TRUE,       
-  pval = F,             
-  conf.int = F,          
-  ylim = c(0,.25),
-  xlim = c(0,5*365.25),        
-  break.time.by = 365,     
-  ggtheme = theme_RTCGA(), 
-  risk.table.y.text.col = T, 
-  risk.table.y.text = T 
-)
-
-sfit0 <- survfit(Surv(t_saes[riskcat==1], sae[riskcat==1]) ~ sprint_set$INTENSIVE[riskcat==1])
-ggsurvplot(
-  sfit0,                     
-  fun = "cumhaz",
-  legend = c(0.2,.8),
-  legend.labs=c("Standard","Intensive"),
-  main = "Score = 0, without diabetes",
-  font.legend=c(14),font.x=c(14),font.y=c(14),font.tickslab=c(14),font.main = c(14),
-  xlab = "Days",
-  ylab = "Cumulative hazard \n of severe adverse events",
-  risk.table = TRUE,       
-  pval = F,             
-  conf.int = F,          
-  ylim = c(0,.25),
-  xlim = c(0,5*365.25),        
-  break.time.by = 365,     
-  ggtheme = theme_RTCGA(), 
-  risk.table.y.text.col = T, 
-  risk.table.y.text = T 
-)
-
-sfit1 <- survfit(Surv(t_saes[riskcat==2], sae[riskcat==2]) ~ sprint_set$INTENSIVE[riskcat==2])
-ggsurvplot(
-  sfit1,                     
-  fun = "cumhaz",
-  legend = c(0.2,.8),
-  legend.labs=c("Standard","Intensive"),
-  main = "Score = 1, without diabetes",
-  font.legend=c(14),font.x=c(14),font.y=c(14),font.tickslab=c(14),font.main = c(14),
-  xlab = "Days",
-  ylab = "Cumulative hazard \n of severe adverse events",
-  risk.table = TRUE,       
-  pval = F,             
-  conf.int = F,          
-  ylim = c(0,.25),
-  xlim = c(0,5*365.25),        
-  break.time.by = 365,     
-  ggtheme = theme_RTCGA(), 
-  risk.table.y.text.col = T, 
-  risk.table.y.text = T 
-)
-
-sfit2 <- survfit(Surv(t_saes[riskcat==3], sae[riskcat==3]) ~ sprint_set$INTENSIVE[riskcat==3])
-ggsurvplot(
-  sfit2,                     
-  fun = "cumhaz",
-  legend = c(0.2,.8),
-  legend.labs=c("Standard","Intensive"),
-  main = "Score = 2, without diabetes",
-  font.legend=c(14),font.x=c(14),font.y=c(14),font.tickslab=c(14),font.main = c(14),
-  xlab = "Days",
-  ylab = "Cumulative hazard \n of severe adverse events",
-  risk.table = TRUE,       
-  pval = F,             
-  conf.int = F,          
-  ylim = c(0,.25),
-  xlim = c(0,5*365.25),        
-  break.time.by = 365,     
-  ggtheme = theme_RTCGA(), 
-  risk.table.y.text.col = T, 
-  risk.table.y.text = T 
-)
-
-sfit3 <- survfit(Surv(t_saes[riskcat==4], sae[riskcat==4]) ~ sprint_set$INTENSIVE[riskcat==4])
-ggsurvplot(
-  sfit3,                     
-  fun = "cumhaz",
-  legend = c(0.2,.8),
-  legend.labs=c("Standard","Intensive"),
-  main = "Score = 3, without diabetes",
-  font.legend=c(14),font.x=c(14),font.y=c(14),font.tickslab=c(14),font.main = c(14),
-  xlab = "Days",
-  ylab = "Cumulative hazard \n of severe adverse events",
-  risk.table = TRUE,       
-  pval = F,             
-  conf.int = F,          
-  ylim = c(0,.25),
-  xlim = c(0,5*365.25),        
-  break.time.by = 365,     
-  ggtheme = theme_RTCGA(), 
-  risk.table.y.text.col = T, 
-  risk.table.y.text = T 
-)
 save.image("~/Data/sprint_pop/data/sprint_run.RData")
 
 #### merge accord data ####
@@ -695,10 +716,12 @@ accord_set = merge(accord_set,cvdoutcomes,by="MaskID")
 accord_set = merge(accord_set,lipids_cut,by="MaskID")
 accord_set = merge(accord_set,otherlabs_cut,by="MaskID")
 save.image("~/Data/sprint_pop/data/accord_cut.RData")
+
+#### test CVD model on accord without recalibration ####
 load("~/Data/sprint_pop/data/accord_cut.RData")
-cvd = (accord_set$censor_nmi==0)|(accord_set$censor_nst==0)|(accord_set$censor_cm==0)
-t_censor = rowMaxs(cbind(accord_set$fuyrs_nmi*365.25,accord_set$fuyrs_nst*365.25,accord_set$fuyrs_cm*365.25))
-t_cvds = rowMaxs(cbind(accord_set$fuyrs_nmi*365.25*(1-accord_set$censor_nmi),accord_set$fuyrs_nst*365.25*(1-accord_set$censor_nst),accord_set$fuyrs_cm*365.25*(1-accord_set$censor_cm)))
+cvd = (accord_set$censor_nmi==0)|(accord_set$censor_nst==0)|(accord_set$censor_cm==0)|(accord_set$censor_chf==0)|(accord_set$censor_maj==0)
+t_censor = rowMaxs(cbind(accord_set$fuyrs_nmi*365.25,accord_set$fuyrs_nst*365.25,accord_set$fuyrs_cm*365.25,accord_set$fuyrs_chf*365.25,accord_set$fuyrs_maj*365.25))
+t_cvds = rowMaxs(cbind(accord_set$fuyrs_nmi*365.25*(1-accord_set$censor_nmi),accord_set$fuyrs_nst*365.25*(1-accord_set$censor_nst),accord_set$fuyrs_cm*365.25*(1-accord_set$censor_cm),accord_set$fuyrs_chf*365.25*(1-accord_set$censor_chf),accord_set$fuyrs_maj*365.25*(1-accord_set$censor_maj)))
 t_cvds[t_cvds==0] = t_censor[t_cvds==0]
 t_cvds[t_cvds==0] = 'NA'
 t_cvds = as.numeric(t_cvds)
@@ -729,21 +752,73 @@ CHR = accord_set$chol
 GLUR = accord_set$fpg
 HDL = accord_set$hdl
 TRR = accord_set$trig
-UMALCR = accord_set$ualb
+UMALCR = accord_set$uacr
 EGFR = accord_set$gfr
 SCREAT = accord_set$screat
 BMI = accord_set$wt_kg/((accord_set$ht_cm/1000)^2)/100
+c2<-data.frame(cvd,t_cvds,sae,t_saes,
+              INTENSIVE,AGE,FEMALE,RACE_BLACK,hisp,
+              SBP.y,DBP.y,N_AGENTS,currentsmoker,formersmoker,
+              ASPIRIN,STATIN,
+              SCREAT,CHR,HDL,TRR,BMI,
+              INTENSIVE*AGE,INTENSIVE*FEMALE,INTENSIVE*RACE_BLACK,INTENSIVE*hisp,
+              INTENSIVE*SBP.y,INTENSIVE*DBP.y,INTENSIVE*N_AGENTS,INTENSIVE*currentsmoker,INTENSIVE*formersmoker,
+              INTENSIVE*ASPIRIN,INTENSIVE*STATIN,
+              INTENSIVE*SCREAT,INTENSIVE*CHR,INTENSIVE*HDL,INTENSIVE*TRR,INTENSIVE*BMI)
+c2=c2[complete.cases(c2),]
+adm.cens=5*365.25
+c2$fu.time <- pmin(c2$t_cvds, adm.cens)
+c2$status <- ifelse(as.numeric(adm.cens < c2$t_cvds), 0, c2$cvd)
+
+#### test CVD model on accord ####
+survcox_c2<-coxph(data=c2, Surv(fu.time, status)~AGE+FEMALE+RACE_BLACK+hisp+SBP.y+DBP.y+
+                    N_AGENTS+currentsmoker+formersmoker+ASPIRIN+STATIN+SCREAT+CHR+
+                    HDL+TRR+BMI+INTENSIVE*AGE+INTENSIVE*RACE_BLACK+
+                    INTENSIVE*DBP.y+INTENSIVE*currentsmoker+INTENSIVE*HDL+
+                    INTENSIVE*TRR)
+summary(survcox_c2)
+survfit_c2=survfit(survcox_c2, newdata=c2, se.fit=FALSE)
+estinc_c2=1-survfit_c2$surv[dim(survfit_c2$surv)[1],]
+c2$dec=as.numeric(cut2(estinc_c2, g=10))
+GND.result=GND.calib(pred=estinc_c2, tvar=c2$fu.time, out=c2$status, 
+                     cens.t=adm.cens, groups=c2$dec, adm.cens=adm.cens)
+GND.result
+ci.cvAUC(estinc_c2,c2$cvd)
+
+
+#### test SAE model on accord without recalibration ####
+d2<-c2
+d2=d2[complete.cases(d2),]
+adm.cens=5*365.25
+d2$fu.time <- pmin(d2$t_saes, adm.cens)
+d2$status <- ifelse(as.numeric(adm.cens < d2$t_saes), 0, d2$sae)
+
+#### test SAE model on accord  ####
+survcox_d2<-coxph(data=d2, Surv(fu.time, status)~AGE+FEMALE+hisp+SBP.y+DBP.y+
+                    N_AGENTS+currentsmoker+formersmoker+ASPIRIN+SCREAT+CHR+HDL+
+                    INTENSIVE*FEMALE+INTENSIVE*currentsmoker+INTENSIVE*STATIN+INTENSIVE*SCREAT+INTENSIVE*CHR+INTENSIVE*TRR)
+summary(survcox_d2)
+survfit_d2=survfit(survcox_d2, newdata=d2, se.fit=FALSE)
+estinc_d2=1-survfit_d2$surv[dim(survfit_d2$surv)[1],]
+d2$dec=as.numeric(cut2(estinc_d2, g=10))
+GND.result=GND.calib(pred=estinc_d2, tvar=d2$fu.time, out=d2$status, 
+                     cens.t=adm.cens, groups=d2$dec, adm.cens=adm.cens)
+GND.result
+ci.cvAUC(estinc_d2,d2$sae)
+
+
+#### C/GDN ####
 INTENSIVE = accord_set$INTENSIVE
 INTENSIVE[INTENSIVE==0]=1
 cint<-data.frame(cvd,t_cvds,sae,t_saes,
                  INTENSIVE,AGE,FEMALE,RACE_BLACK,hisp,
                  SBP.y,DBP.y,N_AGENTS,currentsmoker,formersmoker,
                  ASPIRIN,STATIN,
-                 SCREAT,CHR,HDL,TRR,UMALCR,BMI,
+                 SCREAT,CHR,HDL,TRR,BMI,
                  INTENSIVE*AGE,INTENSIVE*FEMALE,INTENSIVE*RACE_BLACK,INTENSIVE*hisp,
                  INTENSIVE*SBP.y,INTENSIVE*DBP.y,INTENSIVE*N_AGENTS,INTENSIVE*currentsmoker,INTENSIVE*formersmoker,
                  INTENSIVE*ASPIRIN,INTENSIVE*STATIN,
-                 INTENSIVE*SCREAT,INTENSIVE*CHR,INTENSIVE*HDL,INTENSIVE*TRR,INTENSIVE*UMALCR,INTENSIVE*BMI)
+                 INTENSIVE*SCREAT,INTENSIVE*CHR,INTENSIVE*HDL,INTENSIVE*TRR,INTENSIVE*BMI)
 cint=cint[complete.cases(cint),]
 adm.cens=5*365.25
 cint$fu.time <- pmin(cint$t_cvds, adm.cens)
@@ -756,11 +831,11 @@ cstd<-data.frame(cvd,t_cvds,sae,t_saes,
                  INTENSIVE,AGE,FEMALE,RACE_BLACK,hisp,
                  SBP.y,DBP.y,N_AGENTS,currentsmoker,formersmoker,
                  ASPIRIN,STATIN,
-                 SCREAT,CHR,HDL,TRR,UMALCR,BMI,
+                 SCREAT,CHR,HDL,TRR,BMI,
                  INTENSIVE*AGE,INTENSIVE*FEMALE,INTENSIVE*RACE_BLACK,INTENSIVE*hisp,
                  INTENSIVE*SBP.y,INTENSIVE*DBP.y,INTENSIVE*N_AGENTS,INTENSIVE*currentsmoker,INTENSIVE*formersmoker,
                  INTENSIVE*ASPIRIN,INTENSIVE*STATIN,
-                 INTENSIVE*SCREAT,INTENSIVE*CHR,INTENSIVE*HDL,INTENSIVE*TRR,INTENSIVE*UMALCR,INTENSIVE*BMI)
+                 INTENSIVE*SCREAT,INTENSIVE*CHR,INTENSIVE*HDL,INTENSIVE*TRR,INTENSIVE*BMI)
 cstd=cstd[complete.cases(cstd),]
 adm.cens=5*365.25
 cstd$fu.time <- pmin(cstd$t_cvds, adm.cens)
@@ -775,220 +850,238 @@ survfit_dstd=survfit(survcox_d, newdata=cstd, se.fit=FALSE)
 estinc_dstd=1-survfit_dstd$surv[dim(survfit_dstd$surv)[1],]
 risk = estinc_dint-estinc_dstd
 hist(risk,xlab="Predicted increase in serious adverse events \n from intensive treatment (probability)")
-benriskdiff = benefit - risk
-hist(benriskdiff)
-plot(benefit,risk, xlim=c(-.2,.4),ylim=c(-.2,.4),xlab="Predicted reduction in CVD events/death", ylab="Predicted increase in serious adverse events")
-abline(a=0,b=1, col = "gray60")
+plot(sprintbenefit,sprintrisk, xlim=c(-.1,.5),ylim=c(-.1,.5),xlab="Predicted absolute risk reduction in CVD events/death", ylab="Predicted absolute risk increase in serious adverse events", col=rgb(0,0,100,50,maxColorValue=255), pch=19)
+points(benefit,risk, xlim=c(-.1,.5),ylim=c(-.1,.5),xlab="Predicted absolute risk reduction in CVD events/death", ylab="Predicted absolute risk increase in serious adverse events", col=rgb(255,140,0,50,maxColorValue=255), pch=19)
 abline(a=0,b=0, col = "gray60")
 abline(v=0, col = "gray60")
+
 INTENSIVE = accord_set$INTENSIVE
-testset<-data.frame(cvd,t_cvds,sae,t_saes,
-                    INTENSIVE,AGE,FEMALE,RACE_BLACK,hisp,
-                    SBP.y,DBP.y,N_AGENTS,currentsmoker,formersmoker,
-                    ASPIRIN,STATIN,
-                    SCREAT,CHR,HDL,TRR,UMALCR,BMI,
-                    INTENSIVE*AGE,INTENSIVE*FEMALE,INTENSIVE*RACE_BLACK,INTENSIVE*hisp,
-                    INTENSIVE*SBP.y,INTENSIVE*DBP.y,INTENSIVE*N_AGENTS,INTENSIVE*currentsmoker,INTENSIVE*formersmoker,
-                    INTENSIVE*ASPIRIN,INTENSIVE*STATIN,
-                    INTENSIVE*SCREAT,INTENSIVE*CHR,INTENSIVE*HDL,INTENSIVE*TRR,INTENSIVE*UMALCR,INTENSIVE*BMI)
-testset=testset[complete.cases(testset),]
-benriskmodel_pred = predict(benriskmodel,testset)
-summary(benriskmodel_pred)
-hist(benriskmodel_pred)
-riskcatquants = sprintcats
-riskcat = 1*(benriskmodel_pred<riskcatquants[1])+
-  2*((benriskmodel_pred>=riskcatquants[1])&(benriskmodel_pred<riskcatquants[2]))+
-  3*((benriskmodel_pred>=riskcatquants[2])&(benriskmodel_pred<riskcatquants[3]))+
-  4*(benriskmodel_pred>=riskcatquants[3])
-intensive = testset$INTENSIVE
-cvdtable = describeBy(testset$cvd,list(riskcat,testset$INTENSIVE),mat=TRUE)
+pv = c2
+pv$fu.time <- pmin(c2$t_cvds, adm.cens)
+pv$status <- ifelse(as.numeric(adm.cens < c2$t_cvds), 0, c2$cvd)
+
+betax=(survcox_c2$coefficients[1]*pv$AGE+
+         survcox_c2$coefficients[2]*pv$FEMALE+
+         survcox_c2$coefficients[3]*pv$RACE_BLACK+
+         survcox_c2$coefficients[4]*pv$hisp+
+         survcox_c2$coefficients[5]*pv$SBP.y+
+         survcox_c2$coefficients[6]*pv$DBP.y+
+         survcox_c2$coefficients[7]*pv$N_AGENTS+
+         survcox_c2$coefficients[8]*pv$currentsmoker+
+         survcox_c2$coefficients[9]*pv$formersmoker+
+         survcox_c2$coefficients[10]*pv$ASPIRIN+
+         survcox_c2$coefficients[11]*pv$STATIN+
+         survcox_c2$coefficients[12]*pv$SCREAT+
+         survcox_c2$coefficients[13]*pv$CHR+
+         survcox_c2$coefficients[14]*pv$HDL+
+         survcox_c2$coefficients[15]*pv$TRR+
+         survcox_c2$coefficients[16]*pv$BMI+
+         survcox_c2$coefficients[17]*pv$INTENSIVE+
+         survcox_c2$coefficients[18]*pv$INTENSIVE*pv$AGE+
+         survcox_c2$coefficients[19]*pv$INTENSIVE*pv$RACE_BLACK+
+         survcox_c2$coefficients[20]*pv$INTENSIVE*pv$DBP.y+
+         survcox_c2$coefficients[21]*pv$INTENSIVE*pv$currentsmoker+
+         survcox_c2$coefficients[22]*pv$INTENSIVE*pv$HDL+
+         survcox_c2$coefficients[23]*pv$INTENSIVE*pv$TRR)
+cvdpred = 1 - .881^exp(betax-mean(na.omit(betax)))
+estinc_e=cvdpred
+pv$dec=as.numeric(cut2(estinc_e, g=10))
+GND.result=GND.calib(pred=estinc_e, tvar=pv$fu.time, out=pv$status, 
+                     cens.t=adm.cens, groups=pv$dec, adm.cens=adm.cens)
+GND.result
+ci.cvAUC(estinc_e,pv$cvd)
+
+benpredbetaint = (survcox_c2$coefficients[1]*pv$AGE+
+                    survcox_c2$coefficients[2]*pv$FEMALE+
+                    survcox_c2$coefficients[3]*pv$RACE_BLACK+
+                    survcox_c2$coefficients[4]*pv$hisp+
+                    survcox_c2$coefficients[5]*pv$SBP.y+
+                    survcox_c2$coefficients[6]*pv$DBP.y+
+                    survcox_c2$coefficients[7]*pv$N_AGENTS+
+                    survcox_c2$coefficients[8]*pv$currentsmoker+
+                    survcox_c2$coefficients[9]*pv$formersmoker+
+                    survcox_c2$coefficients[10]*pv$ASPIRIN+
+                    survcox_c2$coefficients[11]*pv$STATIN+
+                    survcox_c2$coefficients[12]*pv$SCREAT+
+                    survcox_c2$coefficients[13]*pv$CHR+
+                    survcox_c2$coefficients[14]*pv$HDL+
+                    survcox_c2$coefficients[15]*pv$TRR+
+                    survcox_c2$coefficients[16]*pv$BMI+
+                    survcox_c2$coefficients[17]*1+
+                    survcox_c2$coefficients[18]*1*pv$AGE+
+                    survcox_c2$coefficients[19]*1*pv$RACE_BLACK+
+                    survcox_c2$coefficients[20]*1*pv$DBP.y+
+                    survcox_c2$coefficients[21]*1*pv$currentsmoker+
+                    survcox_c2$coefficients[22]*1*pv$HDL+
+                    survcox_c2$coefficients[23]*1*pv$TRR)
+benintpred = 1 - .881^exp(benpredbetaint-mean(na.omit(betax)))
+
+benpredbetastd = (survcox_c2$coefficients[1]*pv$AGE+
+                    survcox_c2$coefficients[2]*pv$FEMALE+
+                    survcox_c2$coefficients[3]*pv$RACE_BLACK+
+                    survcox_c2$coefficients[4]*pv$hisp+
+                    survcox_c2$coefficients[5]*pv$SBP.y+
+                    survcox_c2$coefficients[6]*pv$DBP.y+
+                    survcox_c2$coefficients[7]*pv$N_AGENTS+
+                    survcox_c2$coefficients[8]*pv$currentsmoker+
+                    survcox_c2$coefficients[9]*pv$formersmoker+
+                    survcox_c2$coefficients[10]*pv$ASPIRIN+
+                    survcox_c2$coefficients[11]*pv$STATIN+
+                    survcox_c2$coefficients[12]*pv$SCREAT+
+                    survcox_c2$coefficients[13]*pv$CHR+
+                    survcox_c2$coefficients[14]*pv$HDL+
+                    survcox_c2$coefficients[15]*pv$TRR+
+                    survcox_c2$coefficients[16]*pv$BMI+
+                    survcox_c2$coefficients[17]*0+
+                    survcox_c2$coefficients[18]*0*pv$AGE+
+                    survcox_c2$coefficients[19]*0*pv$RACE_BLACK+
+                    survcox_c2$coefficients[20]*0*pv$DBP.y+
+                    survcox_c2$coefficients[21]*0*pv$currentsmoker+
+                    survcox_c2$coefficients[22]*0*pv$HDL+
+                    survcox_c2$coefficients[23]*0*pv$TRR)
+benstdpred = 1 - .881^exp(benpredbetastd-mean(na.omit(betax)))
+
+netben = benstdpred-benintpred 
+hist(netben)
+
+
+pv$fu.time <- pmin(c2$t_saes, adm.cens)
+pv$status <- ifelse(as.numeric(adm.cens < c2$t_saes), 0, c2$sae)
+betax=(survcox_d$coefficients[1]*pv$AGE+
+         survcox_d$coefficients[2]*pv$FEMALE+
+         survcox_d$coefficients[3]*pv$hisp+
+         survcox_d$coefficients[4]*pv$SBP.y+
+         survcox_d$coefficients[5]*pv$DBP.y+
+         survcox_d$coefficients[6]*pv$N_AGENTS+
+         survcox_d$coefficients[7]*pv$currentsmoker+
+         survcox_d$coefficients[8]*pv$formersmoker+
+         survcox_d$coefficients[9]*pv$ASPIRIN+
+         survcox_d$coefficients[10]*pv$SCREAT+
+         survcox_d$coefficients[11]*pv$CHR+
+         survcox_d$coefficients[12]*pv$HDL+
+         survcox_d$coefficients[13]*pv$INTENSIVE+
+         survcox_d$coefficients[14]*pv$STATIN+
+         survcox_d$coefficients[15]*pv$TRR+
+         survcox_d$coefficients[16]*pv$FEMALE*pv$INTENSIVE+
+         survcox_d$coefficients[17]*pv$INTENSIVE*pv$currentsmoker+
+         survcox_d$coefficients[18]*pv$STATIN*pv$INTENSIVE+
+         survcox_d$coefficients[19]*pv$INTENSIVE*pv$SCREAT+
+         survcox_d$coefficients[20]*pv$INTENSIVE*pv$CHR+
+         survcox_d$coefficients[21]*pv$INTENSIVE*pv$TRR)
+saepred = 1 - .887^exp(betax-mean(na.omit(betax)))
+estinc_e=saepred
+pv$dec=as.numeric(cut2(estinc_e, g=10))
+GND.result=GND.calib(pred=estinc_e, tvar=pv$fu.time, out=pv$status, 
+                     cens.t=adm.cens, groups=pv$dec, adm.cens=adm.cens)
+GND.result
+ci.cvAUC(estinc_e,pv$sae)
+
+harmpredbetaint = (survcox_d$coefficients[1]*pv$AGE+
+                     survcox_d$coefficients[2]*pv$FEMALE+
+                     survcox_d$coefficients[3]*pv$hisp+
+                     survcox_d$coefficients[4]*pv$SBP.y+
+                     survcox_d$coefficients[5]*pv$DBP.y+
+                     survcox_d$coefficients[6]*pv$N_AGENTS+
+                     survcox_d$coefficients[7]*pv$currentsmoker+
+                     survcox_d$coefficients[8]*pv$formersmoker+
+                     survcox_d$coefficients[9]*pv$ASPIRIN+
+                     survcox_d$coefficients[10]*pv$SCREAT+
+                     survcox_d$coefficients[11]*pv$CHR+
+                     survcox_d$coefficients[12]*pv$HDL+
+                     survcox_d$coefficients[13]*1+
+                     survcox_d$coefficients[14]*pv$STATIN+
+                     survcox_d$coefficients[15]*pv$TRR+
+                     survcox_d$coefficients[16]*pv$FEMALE*1+
+                     survcox_d$coefficients[17]*1*pv$currentsmoker+
+                     survcox_d$coefficients[18]*pv$STATIN*1+
+                     survcox_d$coefficients[19]*1*pv$SCREAT+
+                     survcox_d$coefficients[20]*1*pv$CHR+
+                     survcox_d$coefficients[21]*1*pv$TRR)
+harmintpred = 1 - .887^exp(harmpredbetaint-mean(na.omit(betax)))
+
+harmpredbetastd = (survcox_d$coefficients[1]*pv$AGE+
+                     survcox_d$coefficients[2]*pv$FEMALE+
+                     survcox_d$coefficients[3]*pv$hisp+
+                     survcox_d$coefficients[4]*pv$SBP.y+
+                     survcox_d$coefficients[5]*pv$DBP.y+
+                     survcox_d$coefficients[6]*pv$N_AGENTS+
+                     survcox_d$coefficients[7]*pv$currentsmoker+
+                     survcox_d$coefficients[8]*pv$formersmoker+
+                     survcox_d$coefficients[9]*pv$ASPIRIN+
+                     survcox_d$coefficients[10]*pv$SCREAT+
+                     survcox_d$coefficients[11]*pv$CHR+
+                     survcox_d$coefficients[12]*pv$HDL+
+                     survcox_d$coefficients[13]*0+
+                     survcox_d$coefficients[14]*pv$STATIN+
+                     survcox_d$coefficients[15]*pv$TRR+
+                     survcox_d$coefficients[16]*pv$FEMALE*0+
+                     survcox_d$coefficients[17]*0*pv$currentsmoker+
+                     survcox_d$coefficients[18]*pv$STATIN*0+
+                     survcox_d$coefficients[19]*0*pv$SCREAT+
+                     survcox_d$coefficients[20]*0*pv$CHR+
+                     survcox_d$coefficients[21]*0*pv$TRR)
+harmstdpred = 1 - .887^exp(harmpredbetastd-mean(na.omit(betax)))
+
+netharm = harmintpred-harmstdpred 
+hist(netharm)
+
+plot(netben,netharm, xlim=c(-.2,.4),ylim=c(-.2,.4),xlab="Predicted reduction in CVD events/death", ylab="Predicted increase in serious adverse events")
+abline(a=0,b=0, col = "gray60")
+abline(v=0, col = "gray60")
+
+netbenaccord = netben
+netharmaccord = netharm
+
+#### scatterplots ARD####
+plot(-netbenaccord,netharmaccord, 
+     xlim=c(min(-netbenaccord,-netbensprint),max(-netbenaccord,-netbensprint)), 
+     ylim=c(min(netharmaccord,netharmsprint),max(netharmaccord,netharmsprint)),
+     col=rgb(255,140,0,70,maxColorValue=255), pch=16,
+     xlab = c("Change in predicted probability of CVD events/death w/ int Rx"),
+     ylab = c("\n Change in predicted probability of serious adverse events w/ int Rx"))
+points(-netbensprint,netharmsprint, col=rgb(30,144,255,50,maxColorValue=255), pch=16)
+abline(h=0,v=0,col="gray60")
+legend(-.4, .5, c("SPRINT", "ACCORD-BP"), col = c(rgb(30,144,255,255,maxColorValue=255),rgb(255,140,0,255,maxColorValue=255)),
+       text.col = "black", bty = "n", pch = c(16,16),
+       bg = "white")
+
+
+#### score vs ACCORD outcomes ####
+bencats = c(.01,.03)#c(quantile(netben,na.rm=TRUE,probs=c(1/3)),quantile(netben,na.rm=TRUE,probs=c(2/3)))
+bencat = 1*(netben<bencats[1])+
+  2*((netben>=bencats[1])&(netben<bencats[2]))+
+  3*((netben>=bencats[2]))
+cvdtable = describeBy(pv$cvd,list(bencat,pv$INTENSIVE),mat=TRUE)
 cvdtable
-prop.test(x=c(cvdtable[1,5]*cvdtable[1,6],cvdtable[5,5]*cvdtable[5,6]), n=c(cvdtable[1,5],cvdtable[5,5]), correct=FALSE)
-prop.test(x=c(cvdtable[2,5]*cvdtable[2,6],cvdtable[6,5]*cvdtable[6,6]), n=c(cvdtable[2,5],cvdtable[6,5]), correct=FALSE)
-prop.test(x=c(cvdtable[3,5]*cvdtable[3,6],cvdtable[7,5]*cvdtable[7,6]), n=c(cvdtable[3,5],cvdtable[7,5]), correct=FALSE)
-prop.test(x=c(cvdtable[4,5]*cvdtable[4,6],cvdtable[8,5]*cvdtable[8,6]), n=c(cvdtable[4,5],cvdtable[8,5]), correct=FALSE)
-cvdtabletimes = describeBy(testset$t_cvds,list(riskcat,testset$INTENSIVE),mat=TRUE)
-x1i = cvdtable[1:4,5]*cvdtable[1:4,6]
-x2i = cvdtable[5:8,5]*cvdtable[5:8,6]
-t1i = cvdtabletimes[1:4,5]*cvdtabletimes[1:4,6]
-t2i = cvdtabletimes[5:8,5]*cvdtabletimes[5:8,6]
+prop.test(x=c(cvdtable[1,5]*cvdtable[1,6],cvdtable[4,5]*cvdtable[4,6]), n=c(cvdtable[1,5],cvdtable[4,5]), correct=FALSE)
+prop.test(x=c(cvdtable[2,5]*cvdtable[2,6],cvdtable[5,5]*cvdtable[5,6]), n=c(cvdtable[2,5],cvdtable[5,5]), correct=FALSE)
+prop.test(x=c(cvdtable[3,5]*cvdtable[3,6],cvdtable[6,5]*cvdtable[6,6]), n=c(cvdtable[3,5],cvdtable[6,5]), correct=FALSE)
+cvdtabletimes = describeBy(pv$t_cvds,list(bencat,pv$INTENSIVE),mat=TRUE)
+x1i = cvdtable[1:3,5]*cvdtable[1:3,6]
+x2i = cvdtable[4:6,5]*cvdtable[4:6,6]
+t1i = cvdtabletimes[1:3,5]*cvdtabletimes[1:3,6]
+t2i = cvdtabletimes[4:6,5]*cvdtabletimes[4:6,6]
 rma(measure="IR", x1i, x2i, t1i, t2i, method="REML")
-survdiff(Surv(testset$t_cvds, testset$cvd)~ riskcat+strata(testset$INTENSIVE))
-saetable = describeBy(testset$sae,list(riskcat,testset$INTENSIVE),mat=TRUE)
+survdiff(Surv(pv$t_cvds, pv$cvd)~ bencat+strata(pv$INTENSIVE))
+
+harmcats = c(.005,.04)#c(quantile(netharm,na.rm=TRUE,probs=c(1/3)),quantile(netharm,na.rm=TRUE,probs=c(2/3)))#
+harmcat = 1*(netharm<harmcats[1])+
+  2*((netharm>=harmcats[1])&(netharm<harmcats[2]))+
+  3*((netharm>=harmcats[2]))
+saetable = describeBy(pv$sae,list(harmcat,pv$INTENSIVE),mat=TRUE)
 saetable
-prop.test(x=c(saetable[1,5]*saetable[1,6],saetable[5,5]*saetable[5,6]), n=c(saetable[1,5],saetable[5,5]), correct=FALSE)
-prop.test(x=c(saetable[2,5]*saetable[2,6],saetable[6,5]*saetable[6,6]), n=c(saetable[2,5],saetable[6,5]), correct=FALSE)
-prop.test(x=c(saetable[3,5]*saetable[3,6],saetable[7,5]*saetable[7,6]), n=c(saetable[3,5],saetable[7,5]), correct=FALSE)
-prop.test(x=c(saetable[4,5]*saetable[4,6],saetable[8,5]*saetable[8,6]), n=c(saetable[4,5],saetable[8,5]), correct=FALSE)
-saetabletimes = describeBy(testset$t_saes,list(riskcat,testset$INTENSIVE),mat=TRUE)
-x1i = saetable[1:4,5]*saetable[1:4,6]
-x2i = saetable[5:8,5]*saetable[5:8,6]
-t1i = saetabletimes[1:4,5]*saetabletimes[1:4,6]
-t2i = saetabletimes[5:8,5]*saetabletimes[5:8,6]
+prop.test(x=c(saetable[1,5]*saetable[1,6],saetable[4,5]*saetable[4,6]), n=c(saetable[1,5],saetable[4,5]), correct=FALSE)
+prop.test(x=c(saetable[2,5]*saetable[2,6],saetable[5,5]*saetable[5,6]), n=c(saetable[2,5],saetable[5,5]), correct=FALSE)
+prop.test(x=c(saetable[3,5]*saetable[3,6],saetable[6,5]*saetable[6,6]), n=c(saetable[3,5],saetable[6,5]), correct=FALSE)
+saetabletimes = describeBy(pv$t_saes,list(harmcat,pv$INTENSIVE),mat=TRUE)
+x1i = saetable[1:3,5]*saetable[1:3,6]
+x2i = saetable[4:6,5]*saetable[4:6,6]
+t1i = saetabletimes[1:3,5]*saetabletimes[1:3,6]
+t2i = saetabletimes[4:6,5]*saetabletimes[4:6,6]
 rma(measure="IR", x1i, x2i, t1i, t2i, method="REML")
-survdiff(Surv(testset$t_saes, testset$sae)~ riskcat+strata(testset$INTENSIVE))
-setwd("~/Documents/Epi/Research/NCDs/HTN/SPRINT challenge")
-fit0 <- survfit(Surv(t_cvds[riskcat==1], cvd[riskcat==1]) ~ accord_set$INTENSIVE[riskcat==1])
-ggsurvplot(
-  fit0,                     
-  fun = "cumhaz",
-  legend.labs=c("Standard","Intensive"),
-  main = "Score = 0, with diabetes",
-  font.legend=c(14),font.x=c(14),font.y=c(14),font.tickslab=c(14),font.main = c(14),
-  xlab = "Days",
-  ylab = "Cumulative hazard \n of CVD events/deaths",
-  risk.table = TRUE,       
-  pval = F,             
-  conf.int = F,          
-  ylim = c(0,.25),
-  xlim = c(0,5*365.25),
-  break.time.by = 365,     
-  ggtheme = theme_RTCGA(), 
-  risk.table.y.text.col = T, 
-  risk.table.y.text = T 
-)
-fit1 <- survfit(Surv(t_cvds[riskcat==2], cvd[riskcat==2]) ~ accord_set$INTENSIVE[riskcat==2])
-ggsurvplot(
-  fit1,                     
-  fun = "cumhaz",
-  legend.labs=c("Standard","Intensive"),
-  main = "Score = 1, with diabetes",
-  font.legend=c(14),font.x=c(14),font.y=c(14),font.tickslab=c(14),font.main = c(14),
-  xlab = "Days",
-  ylab = "Cumulative hazard \n of CVD events/deaths",
-  risk.table = TRUE,       
-  pval = F,             
-  conf.int = F,          
-  ylim = c(0,.25),
-  xlim = c(0,5*365.25),        
-  break.time.by = 365,     
-  ggtheme = theme_RTCGA(), 
-  risk.table.y.text.col = T, 
-  risk.table.y.text = T 
-)
+survdiff(Surv(pv$t_saes, pv$sae)~ harmcat+strata(pv$INTENSIVE))
 
-fit2 <- survfit(Surv(t_cvds[riskcat==3], cvd[riskcat==3]) ~ accord_set$INTENSIVE[riskcat==3])
-ggsurvplot(
-  fit2,                     
-  fun = "cumhaz",
-  legend.labs=c("Standard","Intensive"),
-  main = "Score = 2, with diabetes",
-  font.legend=c(14),font.x=c(14),font.y=c(14),font.tickslab=c(14),font.main = c(14),
-  xlab = "Days",
-  ylab = "Cumulative hazard \n of CVD events/deaths",
-  risk.table = TRUE,       
-  pval = F,             
-  conf.int = F,          
-  ylim = c(0,.25),
-  xlim = c(0,5*365.25),        
-  break.time.by = 365,     
-  ggtheme = theme_RTCGA(), 
-  risk.table.y.text.col = T, 
-  risk.table.y.text = T 
-)
-
-fit3 <- survfit(Surv(t_cvds[riskcat==4], cvd[riskcat==4]) ~ accord_set$INTENSIVE[riskcat==4])
-ggsurvplot(
-  fit3,                     
-  fun = "cumhaz",
-  legend.labs=c("Standard","Intensive"),
-  main = "Score = 3, with diabetes",
-  font.legend=c(14),font.x=c(14),font.y=c(14),font.tickslab=c(14),font.main = c(14),
-  xlab = "Days",
-  ylab = "Cumulative hazard \n of CVD events/deaths",
-  risk.table = TRUE,       
-  pval = F,             
-  conf.int = F,          
-  ylim = c(0,.25),
-  xlim = c(0,5*365.25),        
-  break.time.by = 365,     
-  ggtheme = theme_RTCGA(), 
-  risk.table.y.text.col = T, 
-  risk.table.y.text = T 
-)
-
-sfit0 <- survfit(Surv(t_saes[riskcat==1], sae[riskcat==1]) ~ accord_set$INTENSIVE[riskcat==1])
-ggsurvplot(
-  sfit0,                     
-  fun = "cumhaz",
-  legend.labs=c("Standard","Intensive"),
-  main = "Score = 0, with diabetes",
-  font.legend=c(14),font.x=c(14),font.y=c(14),font.tickslab=c(14),font.main = c(14),
-  xlab = "Days",
-  ylab = "Cumulative hazard \n of severe adverse events",
-  risk.table = TRUE,       
-  pval = F,             
-  conf.int = F,          
-  ylim = c(0,.25),
-  xlim = c(0,5*365.25),        
-  break.time.by = 365,     
-  ggtheme = theme_RTCGA(), 
-  risk.table.y.text.col = T, 
-  risk.table.y.text = T 
-)
-
-sfit1 <- survfit(Surv(t_saes[riskcat==2], sae[riskcat==2]) ~ accord_set$INTENSIVE[riskcat==2])
-ggsurvplot(
-  sfit1,                     
-  fun = "cumhaz",
-  legend.labs=c("Standard","Intensive"),
-  main = "Score = 1, with diabetes",
-  font.legend=c(14),font.x=c(14),font.y=c(14),font.tickslab=c(14),font.main = c(14),
-  xlab = "Days",
-  ylab = "Cumulative hazard \n of severe adverse events",
-  risk.table = TRUE,       
-  pval = F,             
-  conf.int = F,          
-  ylim = c(0,.25),
-  xlim = c(0,5*365.25),        
-  break.time.by = 365,     
-  ggtheme = theme_RTCGA(), 
-  risk.table.y.text.col = T, 
-  risk.table.y.text = T 
-)
-
-sfit2 <- survfit(Surv(t_saes[riskcat==3], sae[riskcat==3]) ~ accord_set$INTENSIVE[riskcat==3])
-ggsurvplot(
-  sfit2,                     
-  fun = "cumhaz",
-  legend.labs=c("Standard","Intensive"),
-  main = "Score = 2, with diabetes",
-  font.legend=c(14),font.x=c(14),font.y=c(14),font.tickslab=c(14),font.main = c(14),
-  xlab = "Days",
-  ylab = "Cumulative hazard \n of severe adverse events",
-  risk.table = TRUE,       
-  pval = F,             
-  conf.int = F,          
-  ylim = c(0,.25),
-  xlim = c(0,5*365.25),        
-  break.time.by = 365,     
-  ggtheme = theme_RTCGA(), 
-  risk.table.y.text.col = T, 
-  risk.table.y.text = T 
-)
-
-sfit3 <- survfit(Surv(t_saes[riskcat==4], sae[riskcat==4]) ~ accord_set$INTENSIVE[riskcat==4])
-ggsurvplot(
-  sfit3,                     
-  fun = "cumhaz",
-  legend.labs=c("Standard","Intensive"),
-  main = "Score = 3, with diabetes",
-  font.legend=c(14),font.x=c(14),font.y=c(14),font.tickslab=c(14),font.main = c(14),
-  xlab = "Days",
-  ylab = "Cumulative hazard \n of severe adverse events",
-  risk.table = TRUE,       
-  pval = F,             
-  conf.int = F,          
-  ylim = c(0,.25),
-  xlim = c(0,5*365.25),        
-  break.time.by = 365,     
-  ggtheme = theme_RTCGA(), 
-  risk.table.y.text.col = T, 
-  risk.table.y.text = T 
-)
-save.image("~/Data/sprint_pop/data/accord_run.RData")
-
-
-
+table(bencat,harmcat)
+table(bencat,harmcat)/sum(table(bencat,harmcat))
 
 
