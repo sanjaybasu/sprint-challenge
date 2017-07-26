@@ -458,11 +458,6 @@ prop.test(x=c(cvdtable[1,5]*cvdtable[1,6],cvdtable[4,5]*cvdtable[4,6]), n=c(cvdt
 prop.test(x=c(cvdtable[2,5]*cvdtable[2,6],cvdtable[5,5]*cvdtable[5,6]), n=c(cvdtable[2,5],cvdtable[5,5]), correct=FALSE)
 prop.test(x=c(cvdtable[3,5]*cvdtable[3,6],cvdtable[6,5]*cvdtable[6,6]), n=c(cvdtable[3,5],cvdtable[6,5]), correct=FALSE)
 cvdtabletimes = describeBy(pv$t_cvds,list(bencat,pv$INTENSIVE),mat=TRUE)
-x1i = cvdtable[1:3,5]*cvdtable[1:3,6]
-x2i = cvdtable[4:6,5]*cvdtable[4:6,6]
-t1i = cvdtabletimes[1:3,5]*cvdtabletimes[1:3,6]
-t2i = cvdtabletimes[4:6,5]*cvdtabletimes[4:6,6]
-rma(measure="IR", x1i, x2i, t1i, t2i, method="REML")
 
 harmcats = c(.005,.04)
 harmcat = 1*(netharm<harmcats[1])+
@@ -478,8 +473,7 @@ x1i = saetable[1:3,5]*saetable[1:3,6]
 x2i = saetable[4:6,5]*saetable[4:6,6]
 t1i = saetabletimes[1:3,5]*saetabletimes[1:3,6]
 t2i = saetabletimes[4:6,5]*saetabletimes[4:6,6]
-rma(measure="IR", x1i, x2i, t1i, t2i, method="REML")
-
+ 
 
 
 
@@ -1051,11 +1045,6 @@ prop.test(x=c(cvdtable[1,5]*cvdtable[1,6],cvdtable[4,5]*cvdtable[4,6]), n=c(cvdt
 prop.test(x=c(cvdtable[2,5]*cvdtable[2,6],cvdtable[5,5]*cvdtable[5,6]), n=c(cvdtable[2,5],cvdtable[5,5]), correct=FALSE)
 prop.test(x=c(cvdtable[3,5]*cvdtable[3,6],cvdtable[6,5]*cvdtable[6,6]), n=c(cvdtable[3,5],cvdtable[6,5]), correct=FALSE)
 cvdtabletimes = describeBy(pv$t_cvds,list(bencat,pv$INTENSIVE),mat=TRUE)
-x1i = cvdtable[1:3,5]*cvdtable[1:3,6]
-x2i = cvdtable[4:6,5]*cvdtable[4:6,6]
-t1i = cvdtabletimes[1:3,5]*cvdtabletimes[1:3,6]
-t2i = cvdtabletimes[4:6,5]*cvdtabletimes[4:6,6]
-rma(measure="IR", x1i, x2i, t1i, t2i, method="REML")
 
 harmcats = c(.005,.04)
 harmcat = 1*(netharm<harmcats[1])+
@@ -1071,7 +1060,4 @@ x1i = saetable[1:3,5]*saetable[1:3,6]
 x2i = saetable[4:6,5]*saetable[4:6,6]
 t1i = saetabletimes[1:3,5]*saetabletimes[1:3,6]
 t2i = saetabletimes[4:6,5]*saetabletimes[4:6,6]
-rma(measure="IR", x1i, x2i, t1i, t2i, method="REML")
-
-
 
