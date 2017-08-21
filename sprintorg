@@ -1,0 +1,11 @@
+library(sas7bdat)
+baseline = read.sas7bdat("baseline.sas7bdat")
+bp = read.sas7bdat("bp.sas7bdat")
+outcomes = read.sas7bdat("outcomes.sas7bdat")
+retention = read.sas7bdat("retention.sas7bdat")
+safety = read.sas7bdat("safety.sas7bdat")
+bp_cut = bp[which(bp$VISITCODE=="RZ"),]
+sprint_set = merge(baseline,bp_cut,by="MASKID")
+sprint_set = merge(sprint_set,outcomes,by="MASKID")
+sprint_set = merge(sprint_set,retention,by="MASKID")
+sprint_set = merge(sprint_set,safety,by="MASKID")
