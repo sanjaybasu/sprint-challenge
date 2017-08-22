@@ -16,6 +16,7 @@ library(RTCGA.clinical)
 library(survIDINRI)
 library(corrgram)
 registerDoMC(cores=4)
+attach(sprint_set)
 hisp = (RACE4=="HISPANIC")
 currentsmoker = (SMOKE_3CAT==3)
 formersmoker = (SMOKE_3CAT==2)
@@ -34,7 +35,38 @@ t_saes[t_saes==0] = 'NA'
 t_saes = as.numeric(t_saes)
 dOutcome = Surv(time=t_saes, event = sae)
 testsubset = data.frame(cOutcome,
-                        INTENSIVE,AGE,FEMALE,RACE_BLACK,hisp,
+                        AGE,FEMALE,RACE_BLACK,hisp,
+                        SBP.y,DBP.y,N_AGENTS,currentsmoker,formersmoker,
+                        ASPIRIN,STATIN,
+                        SCREAT,CHR,HDL,TRR,BMI,
+                        INTENSIVE*AGE,INTENSIVE*FEMALE,INTENSIVE*RACE_BLACK,INTENSIVE*hisp,
+                        INTENSIVE*SBP.y,INTENSIVE*DBP.y,INTENSIVE*N_AGENTS,INTENSIVE*currentsmoker,INTENSIVE*formersmoker,
+                        INTENSIVE*ASPIRIN,INTENSIVE*STATIN,
+                        INTENSIVE*SCREAT,INTENSIVE*CHR,INTENSIVE*HDL,INTENSIVE*TRR,INTENSIVE*BMI)
+testsubset=testsubset[complete.cases(testsubset),]
+fit.lasso <- glmnet(as.matrix(testsubset[,-c(1)]), as.matrix(testsubset[,1]), family="cox", alpha=1)
+fit.ridge <- glmnet(as.matrix(testsubset[,-c(1)]), as.matrix(testsubset[,1]), family="cox", alpha=0)
+fit.elnet <- glmnet(as.matrix(testsubset[,-c(1)]), as.matrix(testsubset[,1]), family="cox", alpha=.5)
+fit.lasso.cv <- cv.glmnet(as.matrix(testsubset[,-c(1)]), as.matrix(testsubset[,1]), alpha=1, 
+                          family="cox")
+fit.ridge.cv <- cv.glmnet(as.matrix(testsubset[,-c(1)]), as.matrix(testsubset[,1]), alpha=0,
+                          family="cox")
+fit.elnet.cv <- cv.glmnet(as.matrix(testsubset[,-c(1)]), as.matrix(testsubset[,1]), alpha=.5,
+                          family="cox")
+for (i in 0:10) {
+  assign(paste("fit", i, sep=""), cv.glmnet(as.matrix(testsubset[,-c(1)]), as.matrix(testsubset[,1]), 
+                                            alpha=i/10,family="cox"))
+}
+par(mfrow=c(3,2))
+plot(fit.lasso, xvar="lambda")
+plot(fit10, main="LASSO")
+plot(fit.ridge, xvar="lambda")
+plot(fit0, main="Ridge")
+plot(fit.elnet, xvar="lambda")
+plot(fit5, main="Elastic Net")
+
+testsubset = data.frame(dOutcome,
+                        AGE,FEMALE,RACE_BLACK,hisp,
                         SBP.y,DBP.y,N_AGENTS,currentsmoker,formersmoker,
                         ASPIRIN,STATIN,
                         SCREAT,CHR,HDL,TRR,BMI,
