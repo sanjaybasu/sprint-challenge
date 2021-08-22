@@ -162,6 +162,7 @@ server = function(input, output) {
   # Access input values with input$*
   # Save output objects to output$*
   # Build objects with render*({ code })
+  # Erratum: lines 183 and 207 have been corrected from 2.109712 to 6.44 for diabetes
   netben = reactive({
     round(max(0,((1-((0.881*as.numeric(input$diabetes)+0.943*(1-as.numeric(input$diabetes)))^exp(0.06*as.numeric(input$age)+
                                                                                       -0.117*as.numeric(input$gender)+
@@ -179,7 +180,7 @@ server = function(input, output) {
                                                                                       -0.013*as.numeric(input$hdlchol)+
                                                                                       0.0004*as.numeric(input$trig)+
                                                                                       0.01*as.numeric(input$bmi)-
-                                                                                      (2.109712*as.numeric(input$diabetes)+6.766*(1-as.numeric(input$diabetes))))))-
+                                                                                      (6.44*as.numeric(input$diabetes)+6.766*(1-as.numeric(input$diabetes))))))-
                            (1-((0.881*as.numeric(input$diabetes)+0.943*(1-as.numeric(input$diabetes)))^exp(0.06*as.numeric(input$age)+
                                                                                       -0.117*as.numeric(input$gender)+
                                                                                       -0.058*as.numeric(input$black)+
@@ -203,7 +204,7 @@ server = function(input, output) {
                                                                                         0.207*as.numeric(input$cursmoke)+
                                                                                         -0.0009*as.numeric(input$hdlchol)+
                                                                                         -0.001*as.numeric(input$trig)-
-                                                                                      (2.109712*as.numeric(input$diabetes)+6.766*(1-as.numeric(input$diabetes)))))))),digits=4)
+                                                                                      (6.44*as.numeric(input$diabetes)+6.766*(1-as.numeric(input$diabetes)))))))),digits=4)
     
     
     })
