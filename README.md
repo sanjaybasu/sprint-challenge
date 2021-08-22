@@ -18,5 +18,5 @@ Sanjay Basu, M.D., Ph.D.,1,2* Jeremy B. Sussman, M.D., M.S.3,4, Joseph Rigdon, P
 *to whom correspondence should be addressed:
 Email: sanjay_basu@hms.harvard.edu
 
-**Erratum: (August 2021) ** In the app.R file, lines 183 and 207 should be "6.44", not "2.109712". The code has been corrected
+**Erratum: (August 2021) ** In the app.R file, lines 183 and 207 should be "6.44", not "2.109712". The code has been corrected. Thanks to Scott Fleming and Steve Yadlowsky for finding the error.
 
